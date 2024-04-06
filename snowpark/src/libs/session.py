@@ -4,7 +4,7 @@ from snowflake.snowpark import Session
 class SnowflakeSession:
     connection_parameters = {
         "account": "bbcstudios_test.eu-west-1",
-        "user": "nigel.millward@bbc.com",
+        "user": "<user_account>",
         "password": "<password>",
         "role": "ACCOUNTADMIN",  # optional
         "warehouse": "SDP_ENGINEERING_WH",  # optional
