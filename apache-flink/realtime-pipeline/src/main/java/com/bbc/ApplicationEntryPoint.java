@@ -1,21 +1,18 @@
 package com.bbc;
 
 import com.bbc.pipelines.WordCountPipeline;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 
+@Slf4j
 public class ApplicationEntryPoint {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ApplicationEntryPoint.class);
 
     public static void main(String[] args)  {
 
         try {
-            new WordCountPipeline().streamData();
-
+             new WordCountPipeline().streamData();
         } catch (Exception e){
-            LOG.error("Failed to stream data with the flink application due to an error" + e.getCause());
+            log.info("Failed to stream data with the flink application due to an error" + e.getCause());
         }
     }
 }
