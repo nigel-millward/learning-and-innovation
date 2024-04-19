@@ -17,6 +17,7 @@ import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.
 import org.apache.flink.util.Collector;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class WordCountPipeline {
@@ -46,13 +47,21 @@ public class WordCountPipeline {
                         .sum(1)
                         .name("counter");
 
-        counts.sinkTo(FileSink.<Tuple2<String, Integer>>forRowFormat(
+        /*
+        It contains at least 15 minutes worth of data
+        It hasn’t received new records for the last 5 minutes
+        The file size has reached 1 GB (after writing the last record)
+         */
+        counts.sinkTo(FileSink
+                        .<Tuple2<String, Integer>>forRowFormat(
                                 new Path(outputPath), new SimpleStringEncoder<>())
                         .withRollingPolicy(
                                 DefaultRollingPolicy.builder()
-                                        .withMaxPartSize(MemorySize.ofMebiBytes(1))
-                                        .withRolloverInterval(Duration.ofSeconds(10))
+                                        .withInactivityInterval(Duration.ofMinutes(5))
+                                        .withRolloverInterval(Duration.ofMinutes(15))
+                                        .withMaxPartSize(MemorySize.ofMebiBytes(1000))
                                         .build())
+
                         .build())
                 .name("file-sink");
 

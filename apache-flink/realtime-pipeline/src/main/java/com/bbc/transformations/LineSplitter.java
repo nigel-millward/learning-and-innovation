@@ -11,12 +11,12 @@ public class LineSplitter implements FlatMapFunction<String, Tuple2<String, Inte
     @Override
     public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
         // normalize and split the line
-        String[] tokens = value.toLowerCase().split("\\W+");
+        String[] words = value.toLowerCase().split("\\W+");
 
         // emit the pairs
-        for (String token : tokens) {
-            if (!token.isEmpty()) {
-                out.collect(new Tuple2<>(token, 1));
+        for (String word : words) {
+            if (word.length() > 0) {
+                out.collect(new Tuple2<>(word, 1));
             }
         }
     }
