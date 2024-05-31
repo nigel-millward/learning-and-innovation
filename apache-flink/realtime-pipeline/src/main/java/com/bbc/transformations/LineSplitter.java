@@ -9,9 +9,9 @@ import org.apache.flink.util.Collector;
  */
 public class LineSplitter implements FlatMapFunction<String, Tuple2<String, Integer>> {
     @Override
-    public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
+    public void flatMap(String in, Collector<Tuple2<String, Integer>> out) {
         // normalize and split the line
-        String[] words = value.toLowerCase().split("\\W+");
+        String[] words = in.toLowerCase().split("\\W+");
 
         // emit the pairs
         for (String word : words) {
