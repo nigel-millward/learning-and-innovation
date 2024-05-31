@@ -14,23 +14,21 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
-import org.apache.flink.util.Collector;
+
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
+
 
 @Slf4j
 public class WordCountPipeline {
     private static final String inputPath = "file:///Users/millwn04/development/learning-and-innovation/apache-flink/realtime-pipeline/src/main/resources/testdata/wordcount/safety_dance.csv";
     private static final String outputPath = "file:///Users/millwn04/development/learning-and-innovation/apache-flink/realtime-pipeline/target/wordcount";
-    private final StreamExecutionEnvironment env;
-
-    public WordCountPipeline() {
-        env = StreamExecutionEnvironment.getExecutionEnvironment();
-    }
 
     public void streamData() throws Exception {
         log.info("Pipeline run starting");
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+
         DataStream<String> source = env.fromSource(
                 FileSource.forRecordStreamFormat(
                         new TextLineInputFormat(),
