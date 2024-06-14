@@ -2,9 +2,12 @@
 version 3.5
 
 ## 1.Installation
-- brew install localstack/tap/localstack-cli
-- brew install awscli-local
-- install docker
+ensure you have docker installed  
+install localstack and awscli-local with brew
+```
+brew install localstack/tap/localstack-cli
+brew install awscli-local
+```
 
 ## 2.Running
 
