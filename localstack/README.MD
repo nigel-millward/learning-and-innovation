@@ -1,5 +1,6 @@
-# Localstack 
-version 3.5
+# Localstack
+version: 3.5
+Updated: 2024-06-10
 
 ## 1.Installation
 ensure you have docker installed  
@@ -40,6 +41,8 @@ pip install localstack-utils
 github page: https://github.com/localstack/localstack  
 localstack docs: https://docs.localstack.cloud/overview/  
 feature coverage: https://docs.localstack.cloud/user-guide/aws/feature-coverage/  
-test utils: https://docs.localstack.cloud/user-guide/tools/testing-utils/
+test utils: https://docs.localstack.cloud/user-guide/tools/testing-utils/  
+terraform: https://docs.localstack.cloud/user-guide/integrations/terraform/
+
 
 
