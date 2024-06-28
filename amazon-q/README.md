@@ -14,7 +14,13 @@ Use Amazon Q Developer in integrated development environments (IDEs) to get assi
 4. Security scanning
 5. Upgrading code version - Java from 11 to 17
 
+## Generative AI Policy
+Some BBC AI docs:
+- https://staff.bbc.com/gateway/technology/machinelearning/
+- https://www.bbc.co.uk/editorialguidelines/guidance/use-of-artificial-intelligence
+- https://www.bbc.co.uk/editorialguidelines/guidance/use-of-artificial-intelligence#7noneditorialissuesintheuseofai
 
+AWS responsible AI policy https://aws.amazon.com/machine-learning/responsible-ai/policy/
 
 ## References
 - Amazon Q:https://aws.amazon.com/q/
