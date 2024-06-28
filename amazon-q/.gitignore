@@ -1,0 +1,52 @@
+java/target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### root project IDEA ###
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+.idea/
+
+### java project IDEA ###
+java/.idea/modules.xml
+java/.idea/jarRepositories.xml
+java/.idea/compiler.xml
+java/.idea/libraries/
+java/*.iws
+java/*.iml
+java/*.ipr
+java/.idea/
+
+### java project IDEA ###
+python/.idea/modules.xml
+python/.idea/jarRepositories.xml
+python/.idea/compiler.xml
+python/.idea/libraries/
+python/*.iws
+python/*.iml
+python/*.ipr
+python/.idea/
+
+
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store

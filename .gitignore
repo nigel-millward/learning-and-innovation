@@ -1,0 +1,8 @@
+*/.idea/*
+*.idea/*
+.idea/*
+
+.env
+.env.*
+
+.terrafrom.lock.hcl
