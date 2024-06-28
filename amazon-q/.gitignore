@@ -22,8 +22,9 @@ java/*.iws
 java/*.iml
 java/*.ipr
 java/.idea/
+java/target/
 
-### java project IDEA ###
+### python project IDEA ###
 python/.idea/modules.xml
 python/.idea/jarRepositories.xml
 python/.idea/compiler.xml

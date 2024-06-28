@@ -14,6 +14,24 @@ Use Amazon Q Developer in integrated development environments (IDEs) to get assi
 4. Security scanning
 5. Upgrading code version - Java from 11 to 17
 
+## Usage
+
+Chat tab in sidebar:  
+- type /dev to implement new functionality across multiple filesin your workspace
+- type /trasnform - transform java 8 or 11 maven project to java 11
+
+status bar:
+- security scans
+- pause autosuggestiongs
+- settings
+
+amazon q submenu in ide:
+- explain
+- refactor
+- fix code
+- optimise code
+- send to prompt
+
 ## Generative AI Policy
 Some BBC AI docs:
 - https://staff.bbc.com/gateway/technology/machinelearning/
