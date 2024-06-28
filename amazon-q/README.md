@@ -46,3 +46,4 @@ AWS responsible AI policy https://aws.amazon.com/machine-learning/responsible-ai
 - Pricing:https://aws.amazon.com/q/developer/pricing/  
 - Plugin docs: https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/q-in-IDE.html
 - Plugin install:https://plugins.jetbrains.com/plugin/24267-amazon-q/  
+- demo: https://www.youtube.com/watch?v=X8pxN8TLQ8o&ab_channel=AWSDevelopers
