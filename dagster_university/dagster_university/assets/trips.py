@@ -62,39 +62,44 @@ def taxi_trips(database: DuckDBResource) -> None:
 
 
 @asset(
-    deps=["taxi_zones_file"]
+    deps=["taxi_zones_file"],
 )
 def taxi_zones(database: DuckDBResource) -> None:
-    sql_query = f"""
-        create or replace table zones as (
-            select
-                LocationID as zone_id,
-                zone,
-                borough,
-                the_geom as geometry
-            from '{constants.TAXI_ZONES_FILE_PATH}'
-        );
+    """
+      The raw taxi zones dataset, loaded into a DuckDB database.
+    """
+
+    query = f"""
+      create or replace table zones as (
+        select
+          LocationID as zone_id,
+          zone,
+          borough,
+          the_geom as geometry
+        from '{constants.TAXI_ZONES_FILE_PATH}'
+      );
     """
 
     with database.get_connection() as conn:
-        conn.execute(sql_query)
+        conn.execute(query)
 
 @asset(
-    deps=["taxi_trips"]
+    deps = ["taxi_trips"]
 )
 def trips_by_week(database: DuckDBResource) -> None:
-    current_date = datetime.strptime("2023-03-01", constants.DATE_FORMAT)
-    end_date = datetime.strptime("2023-04-01", constants.DATE_FORMAT)
+
+    current_date = datetime.strptime("2023-01-01", constants.DATE_FORMAT)
+    end_date = datetime.now()
 
     result = pd.DataFrame()
 
     while current_date < end_date:
         current_date_str = current_date.strftime(constants.DATE_FORMAT)
         query = f"""
-            select
-                vendor_id, total_amount, trip_distance, passenger_count
-            from trips
-            where date_trunc('week', pickup_datetime) = date_trunc('week', '{current_date_str}'::date)
+          select
+            vendor_id, total_amount, trip_distance, passenger_count
+          from trips
+          where pickup_datetime >= '{current_date_str}' and pickup_datetime < '{current_date_str}'::date + interval '1 week'
         """
 
         with database.get_connection() as conn:
