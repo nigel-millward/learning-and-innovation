@@ -9,11 +9,9 @@ import base64
 
 
 def main(session: snowpark.Session):
-    # Your code goes here, inside the "main" handler.
+    # Your code goes here, inside the "python" handler.
 
-    federated_id_str = '''
-    E0jo13jseFtgsdjWVFbX7 + fWs6WefuL8D2mhl6xvG3MuM + uyvDkXMWocK / BDlftk
-    '''
+    federated_id_str = 'E0jo13jseFtgsdjWVFbX7+fWs6WefuL8D2mhl6xvG3MuM+uyvDkXMWocK/BDlftk'
 
     fetch_decrypt_keys_sql = """ SELECT  BASE64_DECODE_BINARY(JSON_EXTRACT_PATH_TEXT(FEDID_JSON, ''key'')) 
                                           AS KEY_VALUE, 
@@ -29,29 +27,21 @@ def main(session: snowpark.Session):
 
     pandas_df = fetch_decrypt_keys.to_pandas()
 
-    key_value_str = pandas_df[''
-    KEY_VALUE
-    ''].values[0]
-    iv_value_str = pandas_df[''
-    IV_VALUE
-    ''].values[0]
-    fed_id_binary = pandas_df[''
-    FED_ID
-    ''].values[0]
+    key_value_str = pandas_df['KEY_VALUE'].values[0]
+    iv_value_str = pandas_df['IV_VALUE'].values[0]
+    fed_id_binary = pandas_df['FED_ID'].values[0]
 
     print(f"key_value_str : {key_value_str}")
     print(f"iv_value_str : {iv_value_str}")
     print(f"fed_id_binary : {fed_id_binary}")
-    print(f"       ")
+    print(f"")
 
     cipher = AES.new(key_value_str, AES.MODE_CBC, iv_value_str)
     decryptedtext = cipher.decrypt(fed_id_binary)
     decryptedtext = decryptedtext.decode("utf-8")
 
-    print(f"decryptedtext : {decryptedtext}")
+    print(f"decrypted_text : {decryptedtext}")
 
     # decryptedtext = cipher.decrypt(base64.b64decode(federated_id))
 
-    return ''
-    COMPLETE
-    ''' call PYTHON_WORKSHEET();
+    return '''COMPLETE'''
