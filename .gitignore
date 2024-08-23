@@ -6,3 +6,7 @@
 .env.*
 
 .terrafrom.lock.hcl
+
+.DS_Store
+*/.DS_Store
+

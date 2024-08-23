@@ -1,6 +1,7 @@
 import unittest
 from src.main.aes_decrypt import decrypt_string_by_encode_type
 
+
 class TestAES(unittest.TestCase):
 
     def test_aes_decrypt_base_64_string(self):
