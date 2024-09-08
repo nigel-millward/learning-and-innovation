@@ -13,6 +13,8 @@ print(walrus)
 print(walrus := True)
 
 # can be used in while loops.
+
+#3.7
 inputs = list()
 while True:
     current = input("Write something: ")

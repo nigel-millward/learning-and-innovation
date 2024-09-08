@@ -69,3 +69,40 @@ Resources:
    - Modern and Secure SSL
    - More Information About Your Python Interpreter
    - Future Annotations
+
+real python: https://realpython.com/python310-new-features/  
+python docs: https://docs.python.org/3/whatsnew/3.10.html
+  
+- ### Version 3.11
+1. More Informative Error Tracebacks 
+2. Faster Code Execution 
+3. Nicer Syntax for Asynchronous Tasks 
+4. Improved Type Variables 
+5. Support for TOML Configuration Parsing
+6. Other Pretty Cool Features
+    - Faster Startup
+    - Zero-Cost Exceptions
+    - Exception Groups
+    - Exception Notes
+    - Negative Zero Formatting
+    - Dead Batteries
+
+real python: https://realpython.com/python311-new-features/  
+python docs: https://docs.python.org/3/whatsnew/3.11.html  
+
+### Version 3.12
+1. Improved Error Messages 
+2. More Powerful F-Strings 
+3. Faster Python: More Specializations and Inlined Comprehensions 
+4. Dedicated Type Variable Syntax 
+5. Support for the Linux perf Profiler
+6. Other Pretty Cool Features
+    - One GIL Per Subinterpreter
+    - Immortal Objects
+    - Override Decorator for Explicit Inheritance
+    - Calendar Constants for Days and Months
+    - itertools.batched(): Group Items in an Iterable
+    - Path.walk(): List Files and Subdirectories
+
+real python: https://realpython.com/python312-new-features/  
+python docs: https://docs.python.org/3/whatsnew/3.12.html  
