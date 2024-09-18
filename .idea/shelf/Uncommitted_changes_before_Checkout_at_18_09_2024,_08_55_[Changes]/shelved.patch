@@ -1,0 +1,67 @@
+Index: python_features/README.md
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># Python versions >= 3.8\n\n### Intro to Python\nPython is a high-level, general-purpose programming language. Its design philosophy emphasizes code readability with the use of significant indentation. Python is dynamically typed and garbage-collected. It supports multiple programming paradigms, including structured, object-oriented and functional programming.\n\n### Python versions\nSee active python releases: https://www.python.org/downloads/\n\n| Python version |    First release     | End of support |\n|----------------|:--------------------:|---------------:|\n| 3.13           | 2024-10-01 (planned) |        2029-10 |\n| 3.12           |      2023-10-01      |        2028-10 |\n| 3.11           |      2022-10-24      |        2027-10 |\n| 3.10           |      2021-10-04      |        2026-10 |\n| 3.9            |      2020-10-05      |        2025-10 |\n| 3.8            |      2019-10-14      |        2024-10 |\n \n\n\n### Version 3.8\n1. The Walrus in the Room: Assignment Expressions\n2. Positional-Only Arguments \n3. More Precise Types \n4. Simpler Debugging With f-Strings \n5. Other Pretty Cool Features \n    - importlib.metadata\n    - New and Improved math and statistics Functions\n    - Warnings About Dangerous Syntax\n    - Optimizations\n\nResources: \n- real python: https://realpython.com/python38-new-features/\n- python docs: https://docs.python.org/3/whatsnew/3.8.html\n\n### Version 3.9\n1. Proper Time Zone Support \n    - Accessing Time Zones \n    - Investigating Time Zones\n    - Using Best Practices \n2. Simpler Updating of Dictionaries \n3. More Flexible Decorators \n4. Annotated Type Hints \n5. A More Powerful Python Parser\n6. Other Pretty Cool Features\n    - String Prefix and Suffix\n    - Type Hint Lists and Dictionaries Directly\n    - Topological Sort\n    - Greatest Common Divisor (GCD) and Least Common Multiple (LCM)\n    - New HTTP Status Codes\n    - Removal of Deprecated Compatibility Code\n\nResources: \n- real python: https://realpython.com/python39-new-features/\n- python docs: https://docs.python.org/3/whatsnew/3.9.html\n\n### Version 3.10\n1. Better Error Messages\n2. Structural Pattern Matching \n   - Deconstructing Data Structures \n   - Using Different Kinds of Patterns\n   - Matching Literal Patterns\n3. Type Unions, Aliases, and Guards\n4. Stricter Zipping of Sequences\n5. New Functions in the statistics Module\n6. Other Pretty Cool Features\n   - Default Text Encodings\n   - Asynchronous Iteration\n   - Context Manager Syntax\n   - Modern and Secure SSL\n   - More Information About Your Python Interpreter\n   - Future Annotations\n\nreal python: https://realpython.com/python310-new-features/  \npython docs: https://docs.python.org/3/whatsnew/3.10.html\n  \n- ### Version 3.11\n1. More Informative Error Tracebacks \n2. Faster Code Execution \n3. Nicer Syntax for Asynchronous Tasks \n4. Improved Type Variables \n5. Support for TOML Configuration Parsing\n6. Other Pretty Cool Features\n    - Faster Startup\n    - Zero-Cost Exceptions\n    - Exception Groups\n    - Exception Notes\n    - Negative Zero Formatting\n    - Dead Batteries\n\nreal python: https://realpython.com/python311-new-features/  \npython docs: https://docs.python.org/3/whatsnew/3.11.html  \n\n### Version 3.12\n1. Improved Error Messages \n2. More Powerful F-Strings \n3. Faster Python: More Specializations and Inlined Comprehensions \n4. Dedicated Type Variable Syntax \n5. Support for the Linux perf Profiler\n6. Other Pretty Cool Features\n    - One GIL Per Subinterpreter\n    - Immortal Objects\n    - Override Decorator for Explicit Inheritance\n    - Calendar Constants for Days and Months\n    - itertools.batched(): Group Items in an Iterable\n    - Path.walk(): List Files and Subdirectories\n\nreal python: https://realpython.com/python312-new-features/  \npython docs: https://docs.python.org/3/whatsnew/3.12.html  
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/python_features/README.md b/python_features/README.md
+--- a/python_features/README.md	(revision c37d982bee7c19923af0146fda69be521d465402)
++++ b/python_features/README.md	(date 1725890049014)
+@@ -4,7 +4,9 @@
+ Python is a high-level, general-purpose programming language. Its design philosophy emphasizes code readability with the use of significant indentation. Python is dynamically typed and garbage-collected. It supports multiple programming paradigms, including structured, object-oriented and functional programming.
+ 
+ ### Python versions
+-See active python releases: https://www.python.org/downloads/
++- active python releases: https://www.python.org/downloads/  
++- end of live date: https://endoflife.date/python
++
+ 
+ | Python version |    First release     | End of support |
+ |----------------|:--------------------:|---------------:|
+@@ -15,7 +17,7 @@
+ | 3.9            |      2020-10-05      |        2025-10 |
+ | 3.8            |      2019-10-14      |        2024-10 |
+  
+-
++In the first 1.5 years there are planned releases with bugfixes. In the next 3.5 years there are only security fixes and source distribution without precompiled binaries. Starting with Python 3.13 it will change to 2 + 3 years.
+ 
+ ### Version 3.8
+ 1. The Walrus in the Room: Assignment Expressions
+Index: prefect/requirements.txt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>anyio==4.4.0\nprefect==2.20.3
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/prefect/requirements.txt b/prefect/requirements.txt
+--- a/prefect/requirements.txt	(revision c37d982bee7c19923af0146fda69be521d465402)
++++ b/prefect/requirements.txt	(date 1724410922846)
+@@ -1,2 +1,3 @@
+ anyio==4.4.0
+-prefect==2.20.3
+\ No newline at end of file
++prefect==2.20.3
++prefect-aws==0.4.19
+Index: prefect/README.MD
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+># Prefect Orchestation tool \n\n\n### Installation\nAdd the following to your requirements.txt file\n\n```bash\nanyio==4.4.0\nprefect==2.20.3  \n```\n\nRun the following command on your virtual env:  \n```bash\npip3 install -r requirements.txt \n```\n\nCheck installation details:  \n```bash\nprefect version\n```\n\n### QuickStart\n1. Connect to prefects server api\n```bash\nprefect server start\n```\n\nOpen the prefect dashboard in your browser with http://localhost:4200\n\n2. Start the prefect script my_gh_workflow.py:\n```bash\npython my_gh_workflow.py\n```\n\n3. Create/run a workpool locally:\n```bash\nprefect work-pool create --type process my-work-pool\nprefect work-pool ls\nprefect worker start --pool my-work-pool\n```\n\n4. Deploy and schedule your flow with script create_deployment.py\n```bash\npython create_deployment.py\n```\n\n5. Schedule a run for the deployment\n```bash\nprefect deployment run 'repo-info/my-first-deployment'\n```\n\n### Develop overview\n\nWrite and run flows:  \nhttps://docs-3.prefect.io/3.0rc/develop/write-flows\n\nWrite and run tasks:  \nhttps://docs-3.prefect.io/3.0rc/develop/write-tasks\n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/prefect/README.MD b/prefect/README.MD
+--- a/prefect/README.MD	(revision c37d982bee7c19923af0146fda69be521d465402)
++++ b/prefect/README.MD	(date 1724411678462)
+@@ -57,3 +57,10 @@
+ Write and run tasks:  
+ https://docs-3.prefect.io/3.0rc/develop/write-tasks
+ 
++### DBT with Prefect
++
++Integration:  
++https://docs-3.prefect.io/integrations/prefect-dbt/index  
++
++Blog:  
++https://www.prefect.io/blog/dbt-and-prefect  
