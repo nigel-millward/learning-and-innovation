@@ -57,3 +57,10 @@ https://docs-3.prefect.io/3.0rc/develop/write-flows
 Write and run tasks:  
 https://docs-3.prefect.io/3.0rc/develop/write-tasks
 
+### DBT with Prefect
+
+Integration:  
+https://docs-3.prefect.io/integrations/prefect-dbt/index  
+
+Blog:  
+https://www.prefect.io/blog/dbt-and-prefect  

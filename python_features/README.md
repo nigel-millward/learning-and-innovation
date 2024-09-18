@@ -4,7 +4,9 @@
 Python is a high-level, general-purpose programming language. Its design philosophy emphasizes code readability with the use of significant indentation. Python is dynamically typed and garbage-collected. It supports multiple programming paradigms, including structured, object-oriented and functional programming.
 
 ### Python versions
-See active python releases: https://www.python.org/downloads/
+- active python releases: https://www.python.org/downloads/  
+- end of live date: https://endoflife.date/python
+
 
 | Python version |    First release     | End of support |
 |----------------|:--------------------:|---------------:|
@@ -15,7 +17,7 @@ See active python releases: https://www.python.org/downloads/
 | 3.9            |      2020-10-05      |        2025-10 |
 | 3.8            |      2019-10-14      |        2024-10 |
  
-
+In the first 1.5 years there are planned releases with bugfixes. In the next 3.5 years there are only security fixes and source distribution without precompiled binaries. Starting with Python 3.13 it will change to 2 + 3 years.
 
 ### Version 3.8
 1. The Walrus in the Room: Assignment Expressions
