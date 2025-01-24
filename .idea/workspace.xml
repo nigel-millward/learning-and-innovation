@@ -4,7 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="73445f63-92d5-402f-a96d-1c6f97cedb75" name="Changes" comment="" />
+    <list default="true" id="73445f63-92d5-402f-a96d-1c6f97cedb75" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/dbt_intro/README_DBT.COMMANDS.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dbt_intro/README_DBT_PROFILE.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dbt_intro/README_DBT_PROJECTS.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dbt_intro/README_DBT_SCHEMA.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dbt_intro/README_DBT_SOURCES.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_18_09_2024,_08_55_[Changes]/shelved.patch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_18_09_2024__08_55__Changes_.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbt_intro/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/dbt_intro/README.md" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -41,12 +51,13 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/millwn04/development/training/learning-and-innovation&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/millwn04/development/training/learning-and-innovation/dbt_intro&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/dbt_intro" />
       <recent name="$PROJECT_DIR$/snowpark/src/scripts" />
       <recent name="$PROJECT_DIR$/snowpark" />
       <recent name="$PROJECT_DIR$/snowpark/src" />
