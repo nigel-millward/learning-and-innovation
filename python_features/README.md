@@ -19,6 +19,22 @@ Python is a high-level, general-purpose programming language. Its design philoso
  
 In the first 1.5 years there are planned releases with bugfixes. In the next 3.5 years there are only security fixes and source distribution without precompiled binaries. Starting with Python 3.13 it will change to 2 + 3 years.
 
+
+### Version 3.13
+1. An Improved Interactive Interpreter (REPL)
+2. Better Error Messages
+3. Free-Threaded Python: Look Ma, No GIL
+4. Experimental JIT Compiler
+5. Improvements to Static Typing
+6. Other Pretty Cool Features
+   - A Random Command Line
+   - New copy.replace() for Modifying Immutable Objects
+   - Improved Globbing of Files and Directories
+   - Naked Docstrings
+
+real python: https://realpython.com/python313-new-features/
+python docs: https://docs.python.org/3/whatsnew/3.13.html
+
 ### Version 3.12
 1. Improved Error Messages 
 2. More Powerful F-Strings 
