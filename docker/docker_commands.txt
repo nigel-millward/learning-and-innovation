@@ -1,0 +1,110 @@
+1. General
+2. Build
+3. Images
+4. Container
+5. Docker Hub
+6. Docker machine
+7. Logs
+8. Volumes
+9. Network
+
+
+1.General
+==========
+Docker info - Displays a page of info about docker
+Docker version - Docker Enginer version
+Docker —version
+docker run -it --privileged --pid=host debian nsenter -t 1 -m -u -n -I sh. - log into docker virtual machine on Mac
+
+2.Build
+------
+Docker build . = builds
+Docker build -t [image:tagname] [path]  = for example, docker build -t blah:latest . (Needs the full stop for the path) tag your image when building
+
+3.Images
+---------
+Docker images - list images
+Docker images -a - list all images including intermediaries
+Docker image rm [image] - delete an image
+Docker pull [image] - get an image from the registry
+docker rmi $(docker images -aq) - remove all images
+
+4.Containers
+--------------
+docker run [options] [image] [command] [args]
+Docker run [image] - docker run hello-world
+Docker run -it [image] sh - interactive mode container
+Exit command from
+Docker run -d [image] = detached mode
+Docker run -d -P [image] = automatic port mapping. Will need to do docker ps to find out port. Preferable to use automatic port mapping.
+Docker run -d -p 8080:80 [image] = specify 80 as port outside docker. Good for local testing
+Docker commit ‘containerId’ 'containerName'- save changes for a different image
+Docker diff ‘cointainerId’ - see differences to changed container
+Docker rm ‘container’ - delete a container
+Docker rm -v - delete container with a simple volume
+Docker ps - list running containers
+Docker ps -a list all containers
+Docker stop [container] - stop container
+Docker run creates and starts a container
+Docker create - create container
+Docker start [containerId]- start container
+Docker stop [containerId] - stops a container
+
+docker rm $(docker ps -a -f status=exited -q) = remove all exited containers
+docker rm $(docker ps -aq) - remove all containers
+
+Docker exec -it elegant_carson bash
+
+5.Hub Repositories
+------------------------
+docker push thorinoakenshield/modified_busybox:latest
+
+6.docker machine
+---------------------
+Install docker-machine: https://docs.docker.com/machine/install-machine/
+docker-machine create -d virtualbox vm1
+docker-machine ls
+
+7.Log
+-------
+Docker logs [container] -f = tailing logs for container -f= follow
+Docker logs [container] -f —tail=“100” = display 100 lines
+
+8.Volumes
+------------
+Docker volume create —name some_voume = create a volume
+Docker volume ls = list volumes
+Docker volume rm whoops - remove a volume
+Docker volume create —name [volume_name]
+docker volume create --driver local --opt type=btrfs--opt device=/dev/sda2 --name foo
+Docker volume ls -f dangling=true = list dangling volumes
+Docker volume rm $(docker volume ls -qf dangling=true)
+Docker inspect [containerName] - lists volumes, and path of volume on host
+
+Docker run -v /myvolume -d nginx - create a container with a simple volume
+Docker run -v /tmp/website/:/usr/share/nginx/html -p 80:80 -d nginx - create a container with a hosted container - local dev not prod dev, as can’t have code in container
+Docker run -v some_volume:usr/share/nginx/html busybox sh - name volumes
+
+
+9.Network
+==========
+Docker network ls
+Docker network rm
+Docker run -- network none = no network
+Docker run -- network host = network runs on host machine. Shares same ports as host
+Docker network inspect [network]
+# defined bridge
+Docker network create mynet
+Docker network rm mynet
+
+Eg docker run -it —network none sh, then ifconfig
+
+
+
+
+
+registrator https://docs.docker.com/network/ 
+
+https://blog.laputa.io/kubernetes-flannel-networking-6a1cb1f8ec7c 
+https://github.com/gliderlabs/registrator
+https://hub.docker.com/r/gliderlabs/registrator 
