@@ -1,0 +1,68 @@
+AWS Well architected Framework
+==========================
+Plan
+Research 
+Build
+
+AWS Well architected Framework pillars
+===============================
+Security
+- Apply at all layers
+- Enforce th epriceiple of least privilege
+- Use mutifator authentication (MFA)
+
+Cost optimisation
+- Analyse and attribute expenditures
+- Use cost-effective resources
+- Stop guessing - base upon consumption
+
+Reliability
+- Recover from failure
+- Test recovery procesures
+- Scale to increase availabiliyt
+
+Performance efficiency
+- Reduce latency
+- User serverless architecture
+- Incorporate monitoring
+
+Operational excellence
+- Perform operations with code
+- Test response for unexpected events
+
+Sustainability
+- Understand your impact
+- Maximise utilization
+
+Creating technology solutions is much like constructing a physical building. If the foundation is not solid, it can cause structural problems that undermine the integrity and function of the building. The AWS Well-Architected Framework helps cloud architects build secure, high-performing, resilient, and efficient application infrastructures. It is a consistent approach for customers and partners to evaluate architectures and implement designs that can scale over time.
+
+The AWS Well-Architected Framework started as a whitepaper.
+================================================
+It has expanded to include domain-specific lenses, hands-on labs, and the AWS Well-Architected Tool. 
+
+The architectural reviews focus on the following pillars: 
+• Security – Use AWS security best practices to build policies and processes to protect data and assets. Allow auditing and traceability. Monitor, alert, and audit actions and changes to your environment in real time.
+ • Cost optimization – Achieve cost efficiency while considering fluctuating resource needs. 
+• Reliability – Meet well-defined operational thresholds for applications. This includes support to recover from failures, handling increased demand, and mitigating disruption. 
+• Performance efficiency – Deliver efficient performance for a set of resources like instances, storage, databases, space, and time.
+ • Operational excellence – Run and monitor systems that deliver business value. Continually improve supporting processes and procedures.
+ • Sustainability – Minimize and understand your environmental impact when running cloud workloads. 
+
+With the tool, you can gather data and get recommendations to: • Minimize system failures and operational costs. • Dive deep into business and infrastructure processes. • Provide best practice guidance. • Deliver on the cloud computing value proposition
+
+AWS Well-architectured tool
+- Define workload
+- Conduct a review 
+- Apply best practices
+
+Present solutions
+==============
+Consider how you would answer the following questions: 
+• What are the benefits of using AWS services?
+• How is the AWS global infrastructure organized?
+ • How can you build your cloud infrastructure according to best practices? 
+
+Your answers should include the following solutions: 
+• Use AWS services to increase agility while decreasing complexity and risk.
+ • AWS global infrastructure is organized into AWS Regions. These Regions contain Availability Zones. You can also use AWS Local Zones and edge locations.
+• Use the Well-Architected Framework, which helps cloud architects build secure, high-performing, resilient, and efficient application infrastructures. 
