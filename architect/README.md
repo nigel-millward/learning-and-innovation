@@ -11,7 +11,7 @@
 ## Snowflake Architect
 |Nu.|Item|Link|
 |---|----|----|
-|1. |Snowpro Study Guide| https://learn.snowflake.com/en/certifications/snowpro-advanced-architect/?pdf_name=SnowProArchitectStudyGuide |
+|1. |Snowpro Architect Study Guide| https://learn.snowflake.com/en/certifications/snowpro-advanced-architect/?pdf_name=SnowProArchitectStudyGuide |
 |2. |Snowflake architect|https://learn.snowflake.com/en/courses/ILT-ARCH/|
 |3. |Snowflake certification|https://aws.amazon.com/certification/certified-solutions-architect-professional/|
 
