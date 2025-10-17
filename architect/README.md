@@ -24,7 +24,7 @@
 ## Diagram approaches & tools
 |Nu.|Item|Link|
 |---|----|----|
-|1. |c4 modelling| https://c4model.com/diagrams |
+|1. |c4 modelling| https://c4model.com/diagrams, https://www.youtube.com/watch?v=KvoBrUd1-5E |
 |2. |UML diagrams|https://plantuml.com/|
 |3. |D2 Declarative Diagramming|https://d2lang.com/|
 
