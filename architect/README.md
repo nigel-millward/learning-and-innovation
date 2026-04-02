@@ -4,7 +4,7 @@
 ## AWS architect
 |Nu.|Item|Link|
 |---|----|----|
-|1. |AWS 6 pillars| https://docs.aws.amazon.com/wellarchitected/latest/framework/the-pillars-of-the-framework.html |
+|1. |AWS Well architectect - 6 pillars| https://docs.aws.amazon.com/wellarchitected/latest/framework/the-pillars-of-the-framework.html |
 |2. |AWS Architecture training at BBC|https://bbcprod.plateau.com/learning/user/common/viewItemDetails.do?componentID=COU-50477017&componentTypeID=CLASS&fromSF=Y&revisionDate=1136106000000&menuGroup=Learning&menuItem=Cur&fromDeepLink=true&hideItemDetailsBackLink=true#/7BED036B62A5369AE053174E020AC584 |
 |3. |AWS certification|https://aws.amazon.com/certification/certified-solutions-architect-professional/|
 
