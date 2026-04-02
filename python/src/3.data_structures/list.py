@@ -37,3 +37,7 @@ len(letters)  # returns 5
 a = ['a', 'b', 'c']
 n = [1, 2, 3]
 x = [a, n]
+
+# list comprehensions - [expression for item in iterable if condition]
+squares = [x**2 for x in range(1, 11)]
+print(squares)
