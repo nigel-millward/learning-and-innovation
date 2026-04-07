@@ -50,9 +50,9 @@ def display_profile(user, **details):
 display_profile("jdoe", email="jd@example.com", location="NYC") # Passing arbitrary keyword argument
 
 
-#5 Arbitrary positional arguments
-def sum_numbers(*numbers):
-    return sum(numbers) 
+#5 Arbitrary Argument Lists
+def sum_numbers(file, separator, *args):
+    return file.write(separator.join(args))
 
 print(sum_numbers(1, 2, 3, 4)) # Output: 10
 
