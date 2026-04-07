@@ -70,31 +70,3 @@ def complex_function(a, b, *args, c=10, **kwargs):
     print(f"a: {a}, b: {b}, args: {args}, c: {c}, kwargs: {kwargs}")
 
 complex_function(1, 2, 3, 4, c=5, d=6, e=7) # Output: a: 1, b: 2, args: (3, 4), c: 5, kwargs: {'d': 6, 'e': 7}
-
-
-##################################
-   
-
-# 7. The no names allowed (/)
-def pos_only_arg(arg, /):
-    print(arg)
-
-pos_only_arg(5)              # Works
-pos_only_arg(arg=5)          # Error! (TypeError)
-
-# 8. The names required (*)
-def kwd_only_arg(*, arg):
-    print(arg)
-
-kwd_only_arg(arg=5)          # Works
-kwd_only_arg(5)              # Error! (TypeError)
-
-# 9. Combined example
-def combined_example(pos_only, /, standard, *, kwd_only):
-    print(pos_only, standard, kwd_only)
-
-
-combined_example(1, 2, kwd_only=3)      # Works!
-combined_example(1, standard=2, kwd_only=3) # Also works!
-combined_example(pos_only=1, standard=2, kwd_only=3)  # Error! (TypeError)
-
