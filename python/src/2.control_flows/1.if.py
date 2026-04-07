@@ -9,3 +9,8 @@ elif x == 1:
 elif x > 1:
     print('More than 1')
     
+    
+# in keyword
+reply = input("Do you want to continue? (y/n): ").lower()
+if reply in {'y', 'ye', 'yes'}:
+    pass

@@ -27,4 +27,9 @@ active_users = {}
 for user, status in users.items():
     if status == 'active':
         active_users[user] = status
-
+        
+# 2.4 Strategy: iterate over number range
+for i in range(5):
+    print(i)
+    
+    
