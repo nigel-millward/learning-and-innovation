@@ -1,16 +1,8 @@
 ## What are keyword arguments?
 '''
-keyword argument: an argument preceded by an identifier (e.g. name=) in a function call or passed as a value in a dictionary preceded by **.
-For example, 3 and 5 are both keyword arguments in the following calls to complex():
-complex(real=3, imag=5)
-complex(**{'real': 3, 'imag': 5})
-
-positional argument: an argument that is not a keyword argument. Positional arguments can appear at the beginning of an argument list and/or be passed as elements of an iterable preceded by *. 
-For example, 3 and 5 are both positional arguments in the following calls:
-complex(3, 5)
-complex(*(3, 5))
+explicit positional: These are arguments passed to a function by position (i.e., the order in which they are defined in the function signature).
+keyword argument: Keyword Arguments: These are arguments passed to a function preceded by an identifier (e.g., name="Alice").
 '''
-
 
 ## What are benefits of using keyword arguments?
 '''
@@ -23,47 +15,46 @@ complex(*(3, 5))
     - They allow you to skip optional arguments and only specify the ones you want to change from their default values.
 '''
 
-# 1. Anything goes
+# 1.1 Standard keyword arguments
 def standard_arg(arg):
     print(arg)
-'''
-Both of these work
-standard_arg(5)              # Positional
-standard_arg(arg=5)          # Keyword
-'''
-   
-# 2. Standard keyword arguments
+    
+standard_arg(arg=5) # Explicit keyword argument, Output: 5
+
+
+# 1.2 Standard keyword arguments
 def greet(name, greeting="Hello"):
     print(f"{greeting}, {name}!")
 
-
-greet("Alice") # Calling with positional arguments, Output: Hello, Alice!
 greet(greeting="Hi", name="Bob") # Calling with keyword arguments (order doesn't matter), Output: Hi, Bob!
 
-# 3. Keyword-only arguments
-def set_config(filename, *, mode="read-only"):
-    print(f"File: {filename}, Mode: {mode}")
+# 2. Standard positional argument
+def add(x, y):
+    return x + y    
+print(add(2, 3)) # Output: 5
 
 
-set_config("data.csv", mode="write") # Valid call
-# set_config("data.csv", "write")  # Invalid call: Raises TypeError
+# 3. Arbitary arguments
+'''
+*args (Positional): This syntax collects any extra positional arguments (those passed by value/order, not by name) into a tuple.
+**kwargs (Keyword): This syntax collects any extra keyword arguments into a dictionary, where keys are the argument names and values are the passed data.
 
+'''
 
-# 4. Arbitrary Positional Arguments
-def sum_all(*args):
-    return sum(args)
-
-print(sum_all(10, 20, 30)) # You can pass any number of values, Output: 60 (collected as (10, 20, 30))
-
-# 5. Arbitrary Keyword Arguments
+# 4. Arbitary Keyword Arguments
 def display_profile(user, **details):
     print(f"User: {user}")
     for key, value in details.items():
         print(f"- {key}: {value}")
         
-display_profile("jdoe", email="jd@example.com", location="NYC") # Passing arbitrary named argument
-# Output: User: jdoe, - email: jd@example.com, - location: NYC
+display_profile("jdoe", email="jd@example.com", location="NYC") # Passing arbitrary keyword argument
 
+
+#5 Arbitrary positional arguments
+def sum_numbers(*numbers):
+    return sum(numbers) 
+
+print(sum_numbers(1, 2, 3, 4)) # Output: 10
 
 # 6.Combining all types of arguments
 def complex_function(a, b, *args, c=10, **kwargs):
