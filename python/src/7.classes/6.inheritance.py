@@ -120,7 +120,8 @@ print(d.breed)  # Outputs: Labrador
 
 # 1.6 Checking Relationships
 """
-Python provides built-in functions to verify relationships between classes and objects.
+Python provides built-in functions to verify relationships between 
+classes and objects.
 """
 
 print(isinstance(d, Dog))     # Outputs: True
@@ -181,6 +182,28 @@ d = D()
 
 print(d.action())  # Outputs: B
 print(D.__mro__)  # Shows the lookup order
+"""
+The reason it outputs "B" is due to Python’s Method Resolution Order (MRO) — the rule Python 
+uses to decide which method gets called first in multiple inheritance.
+
+The MRO for my class - if I print with print(D.__mro__)
+Then following is output:
+(<class '__main__.D'>,
+ <class '__main__.B'>,
+ <class '__main__.C'>,
+ <class '__main__.A'>,
+ <class 'object'>)
+
+How Python resolves d.action()
+Python checks classes in this exact order:
+D → no action()
+B → found action() here
+C → (never reached)
+A → (never reached)
+
+Even though both B and C override action(), Python does not try both — it stops at the first match in the MRO.
+"""
+
 
 # 1.9 Summary
 """
