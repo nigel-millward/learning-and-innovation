@@ -99,10 +99,12 @@ class Example:
 
 obj = Example()
 print(obj.show())
+# output: Works fine
 
 # 9. Functions assigned to class attributes become methods
 """Any function assigned as a class attribute becomes a method, even if defined outside the class; 
 however, this can reduce code clarity."""
+
 def external_func(self):
     return "Hello"
 

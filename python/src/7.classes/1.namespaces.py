@@ -53,3 +53,32 @@ I am Global
 # 1.4 checking namespaces directly
 globals() # returns a dictionary of the current global namespace
 locals() # returns a dictionary of the current local namespace
+
+# 1.5 Namespaces explained
+"""
+Example, src/pandas/test.py & inside test.py:
+"""
+x = 10
+
+class Example:
+    pass
+
+def myfunction():
+    pass
+"""
+when pandas.test is imported, python creates a module object pandas.test.
+This is an object of type 'module'.
+
+Inside that module object, is a namespace (a dictionary):  pandas.test.__dict__
+Conceptually:
+{
+    "x": 10,
+    "Example": <class pandas.test.Example>,
+    "myfunction": <function pandas.test.myfunction>,
+    "__name__": "pandas.test",
+    ...
+}
+
+The module is an object
+The namespace is the dictionary of attributes inside that module object
+"""
