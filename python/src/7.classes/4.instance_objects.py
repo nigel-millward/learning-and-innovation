@@ -1,12 +1,31 @@
-# 1. Instance objects
-"""An instance object is a concrete item created from a class template. 
+# =========================================
+# 1. Instance Objects
+# =========================================
+"""
+An instance object is a concrete item created from a class template.
+You can only do two things with it: use its data or call its actions.
+
+This module covers:
+- What an instance object is
+- Data attributes (instance variables)
+- Methods (object actions)
+"""
+
+
+# =========================================
+# 1.1 Instance objects
+# =========================================
+"""An instance object is a concrete item created from a class template.
 You can only do two things with it: use its data or call its actions.
 """
 
-# 2. Data attributes - instance variables
+
+# =========================================
+# 1.2 Data attributes - instance variables
+# =========================================
 """
-These are variables attached directly to a specific object. 
-They store information and do not need to be created in advance; 
+These are variables attached directly to a specific object.
+They store information and do not need to be created in advance;
 they appear the moment you assign a value to them
 """
 
@@ -30,10 +49,11 @@ print(x.counter)
 del x.counter
 
 
-
-# 3. Methods (Object actions)
+# =========================================
+# 1.3 Methods (Object actions)
+# =========================================
 """
-Methods are functions attached to an object. If a class has a function inside it, 
+Methods are functions attached to an object. If a class has a function inside it,
 every instance of that class gets a corresponding method to use
 """
 
@@ -48,4 +68,3 @@ x = MyClass()  # Create an instance object
 
 # x.f is valid because MyClass.f is a function
 print(x.f())  # Prints "hello world"
-

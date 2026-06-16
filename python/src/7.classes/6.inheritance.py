@@ -1,4 +1,6 @@
+# =========================================
 # 1. Inheritance: The Basics
+# =========================================
 """
 Inheritance allows one class (child) to reuse the behaviour of another class (parent).
 
@@ -11,7 +13,9 @@ The child class automatically gains access to the parent's attributes and method
 """
 
 
+# =========================================
 # 1.1 Basic Inheritance Syntax
+# =========================================
 """
 To create a child class, pass the parent class name in parentheses.
 """
@@ -29,7 +33,9 @@ d = Dog()
 print(d.speak())  # Outputs: Some generic sound
 
 
+# =========================================
 # 1.2 Adding New Behaviour (Extending)
+# =========================================
 """
 A child class can define its own methods in addition to inherited ones.
 """
@@ -48,7 +54,9 @@ print(d.speak())     # Inherited → Some generic sound
 print(d.wag_tail())  # New → Tail wagging
 
 
+# =========================================
 # 1.3 Overriding Parent Methods
+# =========================================
 """
 A child class can replace a method from the parent class.
 
@@ -74,7 +82,9 @@ print(d.speak())  # Outputs: Bark
 print(c.speak())  # Outputs: Meow
 
 
+# =========================================
 # 1.4 Using super() to Access Parent Methods
+# =========================================
 """
 The super() function allows you to call a method from the parent class.
 
@@ -96,7 +106,9 @@ d = Dog()
 print(d.speak())  # Outputs: Some generic sound + Bark
 
 
+# =========================================
 # 1.5 Inheriting and Extending __init__
+# =========================================
 """
 A child class can reuse and extend the parent's constructor (__init__).
 
@@ -118,7 +130,9 @@ print(d.name)   # Outputs: Rex
 print(d.breed)  # Outputs: Labrador
 
 
+# =========================================
 # 1.6 Checking Relationships
+# =========================================
 """
 Python provides built-in functions to verify relationships between 
 classes and objects.
@@ -131,7 +145,9 @@ print(issubclass(Dog, Animal))  # Outputs: True
 
 
 
+# =========================================
 # 1.7 Multiple Inheritance
+# =========================================
 
 """
 A class can inherit from more than one parent.
@@ -156,7 +172,9 @@ print(duck.fly())   # Outputs: Flying
 print(duck.swim())  # Outputs: Swimming
 
 
+# =========================================
 # 1.8 Method Resolution Order (MRO)
+# =========================================
 """
 When multiple inheritance is used, Python follows a specific order to find methods.
 
@@ -205,7 +223,9 @@ Even though both B and C override action(), Python does not try both — it stop
 """
 
 
+# =========================================
 # 1.9 Summary
+# =========================================
 """
 Inheritance allows a class to:
 - Reuse behaviour from another class

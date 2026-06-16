@@ -1,10 +1,29 @@
-# 1. class syntax
+# =========================================
+# 1. Class Objects
+# =========================================
 """
-A Python class definition must run before it can be used, similar to how functions work. 
-When Python enters a class definition, it creates a temporary workspace (or namespace) 
-where everything inside that class—like variables and functions—is stored. While classes 
-usually contain functions, they can also hold other types of code. Once Python finishes 
-reading the class definition, it packages that workspace into a final "class object" 
+A class definition introduces a new class object once Python finishes reading it.
+This module looks at the class definition syntax and at what a class object can do:
+referencing its attributes and being instantiated to create new instances.
+
+This module covers:
+- Class syntax
+- Class objects (attribute references and instantiation)
+- Attribute references
+- Class instantiation - making new objects
+- Customizing new objects with __init__
+"""
+
+
+# =========================================
+# 1.1 Class syntax
+# =========================================
+"""
+A Python class definition must run before it can be used, similar to how functions work.
+When Python enters a class definition, it creates a temporary workspace (or namespace)
+where everything inside that class—like variables and functions—is stored. While classes
+usually contain functions, they can also hold other types of code. Once Python finishes
+reading the class definition, it packages that workspace into a final "class object"
 and links it to the class name so you can use it later in your program.
 """
 
@@ -12,22 +31,27 @@ class ClassName:
     # class body
     pass
 
-# 2. class objects
+
+# =========================================
+# 1.2 Class objects
+# =========================================
 """
-A Python class object is a blueprint that does two things: 
+A Python class object is a blueprint that does two things:
 - you can look up its data and functions (attribute references)
 - or you can use it to build new items (instantiation)
 """
 
 
-#2.1 attribute references
+# =========================================
+# 1.3 Attribute references
+# =========================================
 """
 You can access or change data directly on the blueprint using a dot (.)
 """
 class MyClass:
     """A simple example class"""
     i = 12345  # A class variable
-    
+
     def f(self):
         return 'hello world'
 
@@ -40,9 +64,11 @@ MyClass.i = 99999
 print(MyClass.i)      # Outputs: 99999
 
 
-# 2.2  Class instantiation - making new objects
+# =========================================
+# 1.4 Class instantiation - making new objects
+# =========================================
 """
-To create a real object from the blueprint, call the class like a function. 
+To create a real object from the blueprint, call the class like a function.
 This creates a unique instance of the class.
 """
 
@@ -53,7 +79,9 @@ x = MyClass()
 print(x.f())  # Outputs: 'hello world'
 
 
-# 2.3 Customizing New Objects  with init
+# =========================================
+# 1.5 Customizing New Objects with init
+# =========================================
 """
 The __init__ method automatically runs the moment you create a new object. It sets up the starting data for that specific instance
 You can pass data into the class when creating it to make each object unique from the start
