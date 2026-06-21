@@ -48,7 +48,7 @@ gen = reverse("abc")
 
 print(gen)  # Outputs: <generator object ...>
 
-print(next(gen))  # a (from end → c)
+print(next(gen))  # c (from end → c)
 print(next(gen))  # b
 print(next(gen))  # a
 
