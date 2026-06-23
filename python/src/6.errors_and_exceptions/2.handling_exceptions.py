@@ -132,7 +132,9 @@ for cls in [B, C, D]:
 
 
 """
-If reversed, the first match would always be used.
+If exceptions are reversed, the first match would always be used.
+For example, if B was first, it would catch all three exceptions, and C and D would never be reached.
+
 """
 
 
@@ -161,6 +163,29 @@ except Exception as inst:
 # x = spam
 # y = eggs
 
+"""
+Real life example
+"""
+class APIError(Exception):
+    def __init__(self, status_code, message):
+        self.status_code = status_code
+        self.message = message
+        super().__init__(status_code, message)
+
+# raise APIError(404, "User not found")
+
+try:
+    raise APIError(404, "User not found")
+except APIError as e:
+    if e.status_code == 404:
+        print("Not found:", e.message)
+    elif e.status_code == 500:
+        print("Server error:", e.message)
+    else:
+        print("Unexpected API error:", e.status_code, e.message)
+
+# Outputs: Not found: User not found
+
 
 # =========================================
 # 1.8 Catching General Exceptions
@@ -180,6 +205,9 @@ except Exception as err:
 """
 Avoid catching everything unless necessary.
 Prefer specific exception types.
+
+The rule of thumb: only catch exceptions you know how to handle. 
+Let everything else propagate so it fails fast and visibly.
 """
 
 
@@ -199,6 +227,37 @@ try:
 except ValueError as err:
     print("Logging error:", err)
     raise  # re-raise exception
+
+
+"""
+Example: passing the error to higher-level code.
+
+The inner function logs the error and re-raises it.
+The outer caller decides what to do with it.
+"""
+
+def parse_user_input(value):
+    try:
+        return int(value)
+    except ValueError as err:
+        print(f"[parse_user_input] Invalid input: {err}")
+        raise  # let the caller handle it
+
+def process_request(raw_input):
+    try:
+        number = parse_user_input(raw_input)
+        print("Processed:", number)
+    except ValueError:
+        print("[process_request] Could not process request, returning default")
+        return 0
+
+result = process_request("abc")
+print("Result:", result)
+
+# Outputs:
+# [parse_user_input] Invalid input: invalid literal for int() with base 10: 'abc'
+# [process_request] Could not process request, returning default
+# Result: 0
 
 
 # =========================================
