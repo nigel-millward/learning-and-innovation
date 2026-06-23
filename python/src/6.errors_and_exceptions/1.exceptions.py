@@ -161,7 +161,7 @@ You can capture the exception object for more details.
 try:
     int("abc")
 except ValueError as e:
-    print(type(e))  # Exception type
+    print(type(e).__name__)  # Exception type
     print(e)        # Error message
 
 
