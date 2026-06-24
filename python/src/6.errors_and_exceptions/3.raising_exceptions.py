@@ -87,6 +87,30 @@ Re-raising is useful when:
 - You want higher-level code to decide what to do
 """
 
+# load_config is low-level — it handles a specific technical task (reading a file).
+def load_config(path):
+    try:
+        with open(path) as f:
+            return f.read()
+    except FileNotFoundError:
+        print(f"[load_config] Config not found at '{path}', re-raising...")
+        raise  # Let the caller decide how to handle the missing file. In this example, it will be caught by start_app.
+
+# start_app is high-level — it orchestrates the application startup 
+# and knows what to do when things go wrong (fall back to defaults).
+def start_app(config_path):
+    try:
+        config = load_config(config_path)
+        print("App started with config:", config)
+    except FileNotFoundError:
+        # Higher-level code decides: fall back to defaults instead of crashing
+        print("[start_app] No config found — starting with default settings.")
+
+# start_app("config.yaml")
+# Output:
+# [load_config] Config not found at 'config.yaml', re-raising...
+# [start_app] No config found — starting with default settings.
+
 
 # =========================================
 # 1.6 Custom Error Conditions
