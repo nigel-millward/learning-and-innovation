@@ -24,16 +24,27 @@ except OSError:
 
 
 """
-Typical output:
-
-FileNotFoundError: ...
+Traceback (most recent call last):
+  File "4.exception_chaining.py", line 20, in <module>
+    open("database.sqlite")
+FileNotFoundError: [Errno 2] No such file or directory: 'database.sqlite'
 
 During handling of the above exception, another exception occurred:
 
+Traceback (most recent call last):
+  File "4.exception_chaining.py", line 22, in <module>
+    raise RuntimeError("unable to handle error")
 RuntimeError: unable to handle error
 
 Key idea:
 The new exception keeps a reference to the original one.
+
+RuntimeError (bottom, line 37) is what ultimately failed — what went wrong
+FileNotFoundError (top, line 30) is the root cause — why it went wrong
+
+FileNotFoundError caused RuntimeError
+The chain flows: FileNotFoundError happened first → while handling it, RuntimeError was raised.
+
 """
 
 
@@ -57,12 +68,18 @@ except ConnectionError as exc:
 
 
 """
-Typical output:
-
+Traceback (most recent call last):
+  File "4.exception_chaining.py", line 43, in <module>
+    func()
+  File "4.exception_chaining.py", line 41, in func
+    raise ConnectionError()
 ConnectionError
 
 The above exception was the direct cause of the following exception:
 
+Traceback (most recent call last):
+  File "4.exception_chaining.py", line 45, in <module>
+    raise RuntimeError("Failed to open database") from exc
 RuntimeError: Failed to open database
 
 This clearly indicates the relationship between errors.
@@ -87,6 +104,22 @@ try:
 except FileNotFoundError as exc:
     raise RuntimeError("Could not load application data") from exc
 
+"""
+Traceback (most recent call last):
+  File "4.exception_chaining.py", line 62, in <module>
+    load_data()
+  File "4.exception_chaining.py", line 60, in load_data
+    raise FileNotFoundError("file missing")
+FileNotFoundError: file missing
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "4.exception_chaining.py", line 64, in <module>
+    raise RuntimeError("Could not load application data") from exc
+RuntimeError: Could not load application data
+"""
+
 
 # =========================================
 # 1.4 Disabling Exception Chaining
@@ -104,11 +137,12 @@ except OSError:
 
 
 """
-Output will only show:
-
+Traceback (most recent call last):
+  File "4.exception_chaining.py", line 75, in <module>
+    raise RuntimeError("generic error") from None
 RuntimeError: generic error
 
-The original exception is hidden.
+The original FileNotFoundError is completely hidden — only the final error is shown.
 """
 
 
@@ -119,6 +153,7 @@ The original exception is hidden.
 Implicit chaining:
 - Happens automatically
 - Uses context information
+
 
 Explicit chaining:
 - Uses 'from'
