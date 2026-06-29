@@ -32,7 +32,26 @@ print(result)  # Outputs: Results of the 2016 Referendum
 """
 You can include any valid Python expression inside {}.
 """
+# Method calls
+name = "alice"
+print(f"{name.upper()}")    # ALICE
 
+# Ternary/conditional
+age = 20
+print(f"{'adult' if age >= 18 else 'minor'}")  # adult
+
+"""
+Thumb rule: if you have to pause to understand what's inside {}, 
+extract it. F-strings are for presentation, not logic.
+"""
+items = [1, 2, 3, -4, -5]
+
+# Hard to read inline
+print(f"{', '.join(str(x) for x in sorted(items) if x > 0)}")
+
+# Better
+filtered = ', '.join(str(x) for x in sorted(items) if x > 0)
+print(f"{filtered}")
 
 # =========================================
 # 1.2 Formatting Numbers in f-strings
@@ -41,10 +60,48 @@ You can include any valid Python expression inside {}.
 F-strings support formatting options inside {} using a colon.
 """
 
-value = 3.14159
+pie = 3.14159
+large_value = 123_343_665_123
 
-print(f"{value:.2f}")   # Outputs: 3.14 (2 decimal places)
-print(f"{value:10.2f}") # Outputs: '      3.14' (width + alignment)
+print(f"{pie:.2f}")   # Outputs: 3.14 (2 decimal places)
+print(f"{pie:10.2f}") # Outputs: '      3.14' (width + alignment)
+print(f"{large_value:,}") # Outputs: '123,343,665,123' (with thousands separator)
+
+"""
+Grouping separators
+f"{1234567:,}"     # 1,234,567  (comma)
+f"{1234567:_}"     # 1_234_567  (underscore)
+
+Decimal places / notation
+f"{3.14159:.2f}"   # 3.14       (fixed decimal places)
+f"{3.14159:.4f}"   # 3.1416     (rounds)
+f"{12345:.2e}"     # 1.23e+04   (scientific notation)
+f"{12345:.2g}"     # 1.2e+04    (general: picks f or e automatically)
+
+
+Width & alignment
+f"{42:10}"         # '        42'  (right-align, width 10)
+f"{42:<10}"        # '42        '  (left-align)
+f"{42:^10}"        # '    42    '  (centre)
+f"{42:0>10}"       # '0000000042'  (pad with zeros)
+
+Sign
+f"{42:+}"          # +42   (always show sign)
+f"{-42:+}"         # -42
+f"{42: }"          # ' 42' (space for positive, - for negative)
+
+Integer bases
+f"{255:b}"         # 11111111  (binary)
+f"{255:o}"         # 377       (octal)
+f"{255:x}"         # ff        (hex lowercase)
+f"{255:X}"         # FF        (hex uppercase)
+f"{255:#x}"        # 0xff      (with prefix)
+
+Percentage
+f"{0.4967:.2%}"    # 49.67%   (multiplies by 100, adds %)
+
+"""
+
 
 
 # =========================================
@@ -109,7 +166,12 @@ print(name.center(10))  # Centered
 str() and repr() convert values to strings.
 
 - str() → user-friendly output
-- repr() → developer/debugging output
+- repr() → developer debuggin/logging output
+
+repr = representation
+Specifically, it returns the official string representation of an object — 
+one that ideally could be pasted back into Python to recreate the object exactly.
+
 """
 
 s = "Hello, world."
@@ -159,8 +221,8 @@ print(repr((x, y, ("spam", "eggs"))))
 # =========================================
 """
 The string module provides a simpler substitution system.
-
 It uses $placeholders instead of {}.
+It is very old (2004), and predates format() and f-strings
 """
 
 from string import Template
