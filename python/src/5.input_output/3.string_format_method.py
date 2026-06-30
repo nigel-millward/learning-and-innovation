@@ -145,8 +145,28 @@ Format details:
 """
 
 
+
 # =========================================
-# 1.9 Key Idea
+# 1.9 Template strings stored externally
+# =========================================
+"""
+When a format string comes from a config file, database, or user input,
+.format() is preferred because f-strings must be written in source code.
+
+The template is defined separately from the data that fills it.
+"""
+
+# Simulating a template loaded from a config file or database
+import configparser
+config = configparser.ConfigParser()
+
+
+template = config.get("message_template")  # e.g. "Hello, {name}!"
+result = template.format(name="Alice")
+
+
+# =========================================
+# 1.10 Key Idea
 # =========================================
 """
 The str.format() method allows:
@@ -154,13 +174,14 @@ The str.format() method allows:
 - Flexible placement of values
 - Access to complex data structures
 - Detailed control over formatting
+- Useful when template strings are stored externally, such as a config file or database.
 
 It is more verbose than f-strings but more explicit.
 """
 
 
 # =========================================
-# 1.10 Summary
+# 1.11 Summary
 # =========================================
 """
 str.format() provides:
