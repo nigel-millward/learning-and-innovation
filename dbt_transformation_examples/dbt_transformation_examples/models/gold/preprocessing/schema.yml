@@ -1,0 +1,16 @@
+version: 2
+
+# Group 6 — Statistical & Data-Science Preprocessing. Each model is
+# self-documented in-SQL; this file registers the models for parse/test only.
+
+models:
+  - name: normalization_scaling
+    description: "Min-max and z-score scaling via window aggregates."
+  - name: discretization_binning
+    description: "Binning a continuous measure with WIDTH_BUCKET and CASE breakpoints."
+  - name: categorical_encoding
+    description: "One-hot and ordinal encoding of a categorical column."
+  - name: mathematical_scaling
+    description: "Variance-stabilising log1p / sqrt transforms."
+  - name: text_tokenisation
+    description: "Splitting text into a token array with STRTOK_TO_ARRAY."

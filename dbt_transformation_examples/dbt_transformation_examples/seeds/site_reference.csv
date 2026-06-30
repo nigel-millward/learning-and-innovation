@@ -1,0 +1,6 @@
+site_id,site_name,region,is_internal
+1,bbc_one,uk,false
+2,bbc_two,uk,false
+3,bbc_iplayer,uk,false
+4,studios_global,international,false
+5,internal_qa,uk,true

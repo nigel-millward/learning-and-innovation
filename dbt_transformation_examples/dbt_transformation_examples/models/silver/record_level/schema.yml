@@ -1,0 +1,22 @@
+version: 2
+
+# Group 2 — Record-Level transformations. Each model is self-documented in-SQL;
+# this file registers the models for parse/test only.
+
+models:
+  - name: filtering
+    description: "Filtering: WHERE row selection on boolean conditions."
+  - name: conditional_logic
+    description: "Conditional derivation with CASE / IFF."
+  - name: string_manipulation
+    description: "String trim/case/pad/substring/regex cleaning."
+  - name: mathematical_derivation
+    description: "Row-local arithmetic derivation with a NULLIF division guard."
+  - name: datetime_extraction
+    description: "Calendar-part extraction and interval calculations."
+  - name: cryptographic_hashing
+    description: "MD5/SHA2 hashing for masking and surrogate keys."
+  - name: sampling
+    description: "Selecting a repeatable row/block subset with the SAMPLE clause."
+  - name: macro_reuse
+    description: "Applying shared project macros (canonicalise_string, safe_divide) for DRY logic."

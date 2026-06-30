@@ -1,0 +1,3 @@
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = true
+load_macros_from_path = ./macros

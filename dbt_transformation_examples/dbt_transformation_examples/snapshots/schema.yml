@@ -1,0 +1,9 @@
+version: 2
+
+# Group 9 — Historisation (Slowly Changing Dimensions). dbt snapshots that
+# track attribute change over time. Self-documented in-SQL; this file registers
+# the snapshot for parse/test only.
+
+snapshots:
+  - name: visitor_scd2
+    description: "SCD Type 2 history of visitor device/country via dbt snapshot (check strategy)."

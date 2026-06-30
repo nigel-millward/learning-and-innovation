@@ -1,0 +1,39 @@
+name: 'dbt_transformation_examples'
+version: '1.0.0'
+config-version: 2
+
+profile: 'dbt_transformation_examples'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "{{ env_var('DBT_TARGET_PATH') }}"
+  - "{{ env_var('DBT_PACKAGE_PATH') }}"
+
+models:
+  dbt_transformation_examples:
+    silver:
+      +database: "{{ env_var('DBT_SILVER_DATABASE') }}"
+      +schema: "{{ env_var('DBT_SILVER_SCHEMA') }}"
+      +materialized: view
+
+    gold:
+      +database: "{{ env_var('DBT_GOLD_DATABASE') }}"
+      +schema: "{{ env_var('DBT_GOLD_SCHEMA') }}"
+      +materialized: table
+      +transient: false
+
+seeds:
+  dbt_transformation_examples:
+    +database: "{{ env_var('DBT_GOLD_DATABASE') }}"
+    +schema: "{{ env_var('DBT_GOLD_SCHEMA') }}"
+
+snapshots:
+  dbt_transformation_examples:
+    +database: "{{ env_var('DBT_SILVER_DATABASE') }}"
+    +schema: "{{ env_var('DBT_SILVER_SCHEMA') }}"

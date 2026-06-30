@@ -1,0 +1,23 @@
+dbt_transformation_examples:
+  outputs:
+    local_runner:
+      authenticator: externalbrowser
+      account: "bbcstudios_test.eu-west-1"
+      user: "<username>"
+      role: "SYSADMIN"
+      warehouse: "SDP_ETL_LG_WH"
+      database: "SDP_SILVER"
+      type: snowflake
+      schema: "DBT_TRANSFORMATIONS"
+      threads: 1
+    dbt_transformation_examples:
+      account: "{{ env_var('DBT_SNOWFLAKE_ACCOUNT') }}"
+      database: "{{ env_var('DBT_SILVER_DATABASE') }}"
+      password: "{{ env_var('DBT_SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('DBT_ETL_ROLE') }}"
+      schema: "{{ env_var('DBT_SILVER_SCHEMA') }}"
+      threads: 1
+      type: snowflake
+      user: "{{ env_var('DBT_SNOWFLAKE_USERNAME') }}"
+      warehouse: "{{ env_var('DBT_ETL_MD_WH') }}"
+  target: dbt_transformation_examples

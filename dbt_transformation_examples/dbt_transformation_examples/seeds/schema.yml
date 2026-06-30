@@ -1,0 +1,8 @@
+version: 2
+
+# Version-controlled reference data loaded by `dbt seed`. Consumed via ref() by
+# models/gold/relational_set/seed_reference_data.sql.
+
+seeds:
+  - name: site_reference
+    description: "Small maintained lookup mapping SITE_ID to name, region and an internal-traffic flag."

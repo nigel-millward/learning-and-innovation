@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: studios_piano
+    description: >
+      Read-only source for the dbt transformation tutorial models: the silver
+      event view from the studios_piano_daily pipeline. Each tutorial model
+      reads from this source to demonstrate exactly one transformation.
+    database: SDP_SILVER
+    schema: STUDIOS_PIANO
+    tables:
+      - name: studios_piano_events
+        description: >
+          Enriched Studios Piano event stream (one row per event). Provides a
+          timestamp column (EVENT_TIME_UTC), high-cardinality keys (EVENT_ID,
+          VISITOR_ID, VISIT_ID), dimensions (DEVICE_TYPE, BROWSER, OS,
+          GEO_COUNTRY, SITE_ID), numeric measures (VISIT_DURATION,
+          VISIT_PAGE_VIEWS) and an array column (TAGS_ARRAY) that together
+          exercise every transformation group in the tutorial.

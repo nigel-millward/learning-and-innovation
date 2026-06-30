@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: studios_piano
+    description: >
+      Read-only source for the SQL optimisation training models: the silver
+      event view from the studios_piano_daily pipeline.
+    database: SDP_SILVER
+    schema: STUDIOS_PIANO
+    tables:
+      - name: studios_piano_events
+        description: >
+          Enriched Studios Piano event stream (one row per event). Provides a
+          date column (EVENT_TIME_UTC), high-cardinality keys (EVENT_ID,
+          VISITOR_ID, VISIT_ID), dimensions (DEVICE_TYPE, BROWSER, OS,
+          GEO_COUNTRY, SITE_ID) and an array column (TAGS_ARRAY) used to
+          demonstrate the optimisation techniques.

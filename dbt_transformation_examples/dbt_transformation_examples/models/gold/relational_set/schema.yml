@@ -1,0 +1,18 @@
+version: 2
+
+# Group 3 — Relational & Set transformations. Each model is self-documented
+# in-SQL; this file registers the models for parse/test only.
+
+models:
+  - name: horizontal_joins
+    description: "Joining tables side-by-side on a key (LEFT JOIN example)."
+  - name: vertical_set_operations
+    description: "Stacking rows with set operators (EXCEPT example)."
+  - name: lookup
+    description: "Enriching facts with reference/dimension attributes on a key."
+  - name: seed_reference_data
+    description: "Enriching facts from a version-controlled seed CSV via ref()."
+  - name: recursive_hierarchy
+    description: "Flattening a parent/child tree of unknown depth with a recursive CTE."
+  - name: fuzzy_matching
+    description: "Approximate matching to a canonical list via EDITDISTANCE / JAROWINKLER."

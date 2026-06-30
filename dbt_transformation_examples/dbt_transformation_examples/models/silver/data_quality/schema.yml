@@ -1,0 +1,14 @@
+version: 2
+
+# Group 5 — Data Quality, Cleaning & Imputation. Each model is self-documented
+# in-SQL; this file registers the models for parse/test only.
+
+models:
+  - name: null_handling_coalescing
+    description: "Null handling with COALESCE / NVL / NULLIF defaults."
+  - name: imputation
+    description: "Mean imputation of missing numerics with an imputed-row flag."
+  - name: outlier_handling
+    description: "Capping (winsorising) at a percentile bound plus invalid-row removal."
+  - name: value_mapping_standardisation
+    description: "Mapping erratic categorical text to a canonical value."
