@@ -33,7 +33,7 @@ def read_csv_file_with_csv_reader():
 
     print(quick_data)
     
-def remove_enclosure_from_csv_file():
+def remove_column_from_csv_file():
     with open(input_file_path,"r" ) as csv_file:
         data:list = list(csv.reader(csv_file))
     
@@ -49,7 +49,26 @@ def remove_enclosure_from_csv_file():
     transformed: list = [row[:-1] for row in data]
     
     print(transformed)
+
+def write_to_file():
+    
+    script_dir = os.path.dirname(__file__)
+    
+    input_file_path = os.path.join(script_dir, 'input.csv') 
+    with open(input_file_path,"r" ) as csv_file:
+        data:list = list(csv.reader(csv_file))
+    
+    transformed: list = [row[:-1] for row in data] 
+    
+    output_path = os.path.join(script_dir, 'out.csv')
+    with open(output_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(transformed)
         
 
 
-remove_enclosure_from_csv_file()
+if __name__ == 'main':
+    read_csv_file_as_string()
+    read_csv_file_with_csv_reader()
+    remove_column_from_csv_file()
+    write_to_file()    

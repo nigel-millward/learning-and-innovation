@@ -90,6 +90,7 @@ squares[3:]  # elements from index 3 to the end
 squares[:]   # all elements
 squares[::2] # every other element
 squares[-1]  # last element
+squares[:-1] # all elements except the last
 
 
 # =========================================

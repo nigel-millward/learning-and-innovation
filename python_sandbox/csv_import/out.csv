@@ -1,0 +1,11 @@
+animal_id,common_name,scientific_name,class,diet,habitat,age_years,weight_kg
+A001,African Lion,Panthera leo,Mammal,Carnivore,Savanna,8,190.5
+A002,Red Panda,Ailurus fulgens,Mammal,Herbivore,Mountain Forest,3,4.8
+A003,Emperor Penguin,Aptenodytes forsteri,Bird,Carnivore,Antarctic Ice,5,30.2
+A004,Bald Eagle,Haliaeetus leucocephalus,Bird,Carnivore,Forest/Coast,12,4.5
+A005,King Cobra,Ophiophagus hannah,Reptile,Carnivore,Rainforest,6,6.1
+A006,Green Sea Turtle,Chelonia mydas,Reptile,Herbivore,Ocean Reef,25,135.0
+A007,Axolotl,Ambystoma mexicanum,Amphibian,Carnivore,Freshwater Lake,2,0.12
+A008,Clownfish,Amphiprion ocellaris,Fish,Omnivore,Coral Reef,1,0.05
+
+
