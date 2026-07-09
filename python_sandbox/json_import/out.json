@@ -1,0 +1,74 @@
+[
+  {
+    "animal_id": "A001",
+    "common_name": "African Lion",
+    "class": "Mammal",
+    "diet": "Carnivore",
+    "habitat": "Savanna",
+    "age_years": 8,
+    "weight_kg": 190.5
+  },
+  {
+    "animal_id": "A002",
+    "common_name": "Red Panda",
+    "class": "Mammal",
+    "diet": "Herbivore",
+    "habitat": "Mountain Forest",
+    "age_years": 3,
+    "weight_kg": 4.8
+  },
+  {
+    "animal_id": "A003",
+    "common_name": "Emperor Penguin",
+    "class": "Bird",
+    "diet": "Carnivore",
+    "habitat": "Antarctic Ice",
+    "age_years": 5,
+    "weight_kg": 30.2
+  },
+  {
+    "animal_id": "A004",
+    "common_name": "Bald Eagle",
+    "class": "Bird",
+    "diet": "Carnivore",
+    "habitat": "Forest/Coast",
+    "age_years": 12,
+    "weight_kg": 4.5
+  },
+  {
+    "animal_id": "A005",
+    "common_name": "King Cobra",
+    "class": "Reptile",
+    "diet": "Carnivore",
+    "habitat": "Rainforest",
+    "age_years": 6,
+    "weight_kg": 6.1
+  },
+  {
+    "animal_id": "A006",
+    "common_name": "Green Sea Turtle",
+    "class": "Reptile",
+    "diet": "Herbivore",
+    "habitat": "Ocean Reef",
+    "age_years": 25,
+    "weight_kg": 135.0
+  },
+  {
+    "animal_id": "A007",
+    "common_name": "Axolotl",
+    "class": "Amphibian",
+    "diet": "Carnivore",
+    "habitat": "Freshwater Lake",
+    "age_years": 2,
+    "weight_kg": 0.12
+  },
+  {
+    "animal_id": "A008",
+    "common_name": "Clownfish",
+    "class": "Fish",
+    "diet": "Omnivore",
+    "habitat": "Coral Reef",
+    "age_years": 1,
+    "weight_kg": 0.05
+  }
+]
