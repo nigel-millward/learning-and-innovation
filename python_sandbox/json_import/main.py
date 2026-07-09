@@ -22,7 +22,6 @@ def import_json_file():
         logger.info('Json loaded successfully')
     
 
-    
     # remove enclosure_id from each of the animals
     transformed = [{k: v for k, v in row.items() if k not in {'enclosure_id', 'scientific_name'}} for row in data]
     
