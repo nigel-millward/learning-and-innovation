@@ -1,0 +1,37 @@
+2026-07-08 08:00:01 INFO auth-service User login successful user_id=1001 ip=10.1.1.15 session=abc001
+2026-07-08 08:00:05 INFO web-service Request completed method=GET path=/ status=200 duration=23ms
+2026-07-08 08:00:09 WARNING auth-service Failed login attempt user=j.smith ip=203.0.113.10
+2026-07-08 08:00:12 INFO db-service Connection pool initialized size=25
+2026-07-08 08:00:15 ERROR payment-service Payment declined order_id=ORD2001 reason=card_expired
+2026-07-08 08:00:20 INFO auth-service User logout user_id=1001 session=abc001
+2026-07-08 08:00:25 INFO web-service Request completed method=GET path=/products status=200 duration=41ms
+2026-07-08 08:00:28 DEBUG inventory-service Product cache refreshed count=1500
+2026-07-08 08:00:32 INFO web-service Request completed method=POST path=/cart status=201 duration=55ms
+2026-07-08 08:00:35 ERROR db-service Query timeout query_id=Q10001 duration=30001ms
+2026-07-08 08:00:40 INFO auth-service User login successful user_id=1002 ip=10.1.1.16 session=abc002
+2026-07-08 08:00:45 INFO payment-service Payment successful order_id=ORD2002 amount=49.99
+2026-07-08 08:00:50 INFO web-service Request completed method=GET path=/checkout status=200 duration=29ms
+2026-07-08 08:00:55 WARNING inventory-service Low stock sku=SKU-100 qty=5
+2026-07-08 08:01:00 INFO shipping-service Shipment created order_id=ORD2002 tracking=TRK12345
+2026-07-08 08:01:05 DEBUG auth-service Token refresh session=abc002
+2026-07-08 08:01:10 INFO web-service Request completed method=GET path=/orders status=200 duration=18ms
+2026-07-08 08:01:13 ERROR payment-service Payment gateway timeout request_id=PG001
+2026-07-08 08:01:17 INFO auth-service User login successful user_id=1003 ip=10.1.1.17 session=abc003
+2026-07-08 08:01:20 INFO db-service Backup completed duration=120s
+2026-07-08 08:01:25 INFO web-service Request completed method=GET path=/ status=200 duration=26ms
+2026-07-08 08:01:30 WARNING auth-service Multiple failed logins user=test.user count=5
+2026-07-08 08:01:35 INFO payment-service Payment successful order_id=ORD2003 amount=129.50
+2026-07-08 08:01:40 INFO shipping-service Label generated order_id=ORD2003
+2026-07-08 08:01:45 ERROR inventory-service Inventory sync failed source=warehouse-a
+2026-07-08 08:01:50 INFO web-service Request completed method=GET path=/products/100 status=200 duration=31ms
+2026-07-08 08:01:55 DEBUG web-service Response cached path=/products/100
+2026-07-08 08:02:00 INFO auth-service User logout user_id=1003 session=abc003
+2026-07-08 08:02:05 INFO web-service Request completed method=GET path=/search status=200 duration=47ms
+2026-07-08 08:02:10 ERROR db-service Deadlock detected transaction=TX9981
+2026-07-08 08:02:15 INFO payment-service Payment successful order_id=ORD2004 amount=19.99
+2026-07-08 08:02:20 INFO shipping-service Shipment created order_id=ORD2004 tracking=TRK12346
+2026-07-08 08:02:25 WARNING web-service Slow request path=/search duration=5221ms
+2026-07-08 08:02:30 INFO auth-service User login successful user_id=1004 ip=10.1.1.18 session=abc004
+2026-07-08 08:02:35 INFO web-service Request completed method=POST path=/checkout status=200 duration=95ms
+2026-07-08 08:02:40 ERROR payment-service Fraud rule triggered order_id=ORD2005
+2026-07-08 08:02:45 INFO inventory-service Stock updated sku=SKU-105 qty=120
