@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from collections.abc import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ input_file_path = os.path.join(script_dir, 'application.log')
 +-------------------------------+---------------+----------------------------------+
 """
 
-def import_log_file(file_path) -> iter[str]:
+def import_log_file(file_path) -> Iterator[str]:
     """Generator: yields one stripped log line at a time. Memory-efficient for large files.
     
     A file object is iterable, and iterating over it yields one line at a time, reading from disk as it goes. 
