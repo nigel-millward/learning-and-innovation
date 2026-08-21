@@ -1,0 +1,5 @@
+# Local Dagster instance directories, created when DAGSTER_HOME is unset.
+# Each run generates a new random name (tmpXXXXXXXX), holding schedules,
+# history, and compute logs. Scoped to this project so the pattern cannot
+# over-match elsewhere in the repository.
+tmp*/

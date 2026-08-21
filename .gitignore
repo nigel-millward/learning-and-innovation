@@ -1,14 +1,24 @@
-*/.idea/*
-*.idea/*
-.idea/*
+# JetBrains IDE. Patterns are deliberately unanchored so they keep working
+# regardless of how deeply a project is nested.
+.idea/
+*.iml
 
+# Local environment files. The committed template is the exception.
 .env
 .env.*
+!.env.example
 
-.terrafrom.lock.hcl
+# Terraform provider cache and local state.
+# .terraform.lock.hcl is intentionally NOT ignored - it is a dependency lock
+# file and should be committed.
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# dbt local machine state. .test_env is deliberately NOT ignored.
+.user.yml
 
 .DS_Store
-*/.DS_Store
 
 target/
 dbt_packages/
