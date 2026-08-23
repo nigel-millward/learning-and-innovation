@@ -30,8 +30,9 @@ curl http://localhost:11434/api/generate \
 Single request and response.
 
 Learning:
-- LLM API calls
-- Basic prompts
+API call
+Error handling
+JSON response
 
 ### 02-interactive-chat
 

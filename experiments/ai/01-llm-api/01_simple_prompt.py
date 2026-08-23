@@ -11,7 +11,6 @@ import requests
 OLLAMA_URL = "http://localhost:11434/api/generate"
 TIMEOUT_SECONDS = 60
 
-
 def main():
     try:
         payload = call_ollama("Explain what a Large Language Model is in simple terms in under 300 words")
