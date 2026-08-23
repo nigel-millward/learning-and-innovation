@@ -32,6 +32,9 @@ def main():
     except requests.exceptions.RequestException as exc:
         print(f"Error: request to the LLM server failed: {exc}")
         return 1
+    except Exception as exc:
+        print(f"Error: an unexpected error occurred: {exc}")
+        return 1
 
     print(payload["response"])
     return 0
