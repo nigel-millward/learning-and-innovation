@@ -1,9 +1,13 @@
 # CLAUDE.md - RAG Project Guidelines
 
 ## Build/Test Commands
-- Run scripts: `python <filename>.py`
-- Activate venv: `source venv/bin/activate`
-- Install dependencies: `pip install -r requirements.txt` (if created)
+- Venv: uv-managed, outside the repo, at `~/.virtualenv/advanced-rag-techniques-3.1.2/` (CPython 3.12). It has no `pip`
+- Activate venv: `source ~/.virtualenv/advanced-rag-techniques-3.1.2/bin/activate`
+- Install dependencies: `uv pip install -r requirements.txt` (venv active), or without activating:
+  `uv pip install --python ~/.virtualenv/advanced-rag-techniques-3.1.2/bin/python -r requirements.txt`
+- Run scripts from this directory: `python <filename>.py` (paths like `data/...` are relative to it)
+- Run without the matplotlib window blocking (e.g. `expansion_answer.py`): `MPLBACKEND=Agg python <filename>.py`
+- `expansion_answer.py` needs a local Ollama server (`ollama serve`) with `llama3.2` pulled; see README.md
 - Single test: `pytest path/to/test.py -v`
 
 ## Code Style Guidelines

@@ -9,24 +9,26 @@
 ### to synthesize a final answer. This script stops at retrieval + visualizing the results
 ### (lines ~155+).
 ################################################################################################
-from helper_utils import project_embeddings, word_wrap
-from pypdf import PdfReader
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
+import sys
 
-from pypdf import PdfReader
+import httpx
+import ollama
 import umap
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_ollama import ChatOllama
+from pypdf import PdfReader
+
+from helper_utils import project_embeddings, word_wrap
 
 
 ################################################################################################
-### Setup 
+### Setup: local Ollama server (same setup as experiments/ai/01-llm-api)
+###   brew install ollama  ->  ollama serve  ->  ollama pull llama3.2
 ################################################################################################
-# Load environment variables from .env file
-load_dotenv()
-
-openai_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=openai_key)
+OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_MODEL = "llama3.2"
+TIMEOUT_SECONDS = 60
 
 ################################################################################################
 ### Extract Text from PDF & filter empty strings
@@ -114,29 +116,49 @@ retrieved_documents = results["documents"][0]
 ###  Generate hypothetical answer (hullicination) using original query without any context
 ################################################################################################
 
-def augment_query_generated(query, model="gpt-5.6-luna"):
-    prompt = """You are a helpful expert financial research assistant. 
-   Provide an example answer to the given question, that might be found in a document like an annual report."""
-    messages = [
-        {
-            "role": "system",
-            "content": prompt,
-        },
-        {"role": "user", "content": query},
-    ]
+def augment_query_generated(query: str, model: str = OLLAMA_MODEL) -> str:
+    """Ask the local LLM for a hypothetical answer to `query`.
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
+    Args:
+        query: The user's question.
+        model: The Ollama model name; it must already be pulled.
+
+    Returns:
+        The generated answer text.
+    """
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a helpful expert financial research assistant. "
+                "Provide an example answer to the given question, that might be "
+                "found in a document like an annual report.",
+            ),
+            ("human", "{query}"),
+        ]
     )
-    content = response.choices[0].message.content
-    return content
+    llm = ChatOllama(
+        model=model,
+        base_url=OLLAMA_BASE_URL,
+        client_kwargs={"timeout": TIMEOUT_SECONDS},
+    )
+    # LCEL chain: fill the prompt -> call the model -> pull out the reply text
+    chain = prompt | llm | StrOutputParser()
+    return chain.invoke({"query": query})
 
 ################################################################################################
 ###  Join original query with hypothetical answer (hullicination) and 
 ################################################################################################
 original_query = "What was the total profit for the year, and how does it compare to the previous year?"
-hypothetical_answer = augment_query_generated(original_query)
+try:
+    hypothetical_answer = augment_query_generated(original_query)
+except (ConnectionError, httpx.ConnectError):
+    sys.exit(f"Error: could not connect to Ollama at {OLLAMA_BASE_URL}. Is `ollama serve` running?")
+except httpx.TimeoutException:
+    sys.exit(f"Error: Ollama did not respond within {TIMEOUT_SECONDS}s.")
+except ollama.ResponseError as exc:
+    # e.g. 404 when the model has not been pulled: `ollama pull llama3.2`
+    sys.exit(f"Error: Ollama returned {exc.status_code}: {exc.error}")
 
 joint_query = f"{original_query} {hypothetical_answer}"
 print(word_wrap(joint_query))
