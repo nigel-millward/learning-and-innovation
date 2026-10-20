@@ -12,13 +12,17 @@
 import sys
 
 import httpx
+import numpy as np
 import ollama
 import umap
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableSerializable
 from langchain_ollama import ChatOllama
 from pypdf import PdfReader
 
+from chromadb.api import ClientAPI
+from chromadb.api.types import PyEmbeddings
 from helper_utils import project_embeddings, word_wrap
 
 
@@ -26,15 +30,15 @@ from helper_utils import project_embeddings, word_wrap
 ### Setup: local Ollama server (same setup as experiments/ai/01-llm-api)
 ###   brew install ollama  ->  ollama serve  ->  ollama pull llama3.2
 ################################################################################################
-OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_MODEL = "llama3.2"
-TIMEOUT_SECONDS = 60
+OLLAMA_BASE_URL: str = "http://localhost:11434"
+OLLAMA_MODEL: str = "llama3.2"
+TIMEOUT_SECONDS: int = 60
 
 ################################################################################################
 ### Extract Text from PDF & filter empty strings
 ################################################################################################
-reader = PdfReader("data/microsoft-annual-report.pdf")
-pdf_texts = [p.extract_text().strip() for p in reader.pages]
+reader: PdfReader = PdfReader("data/microsoft-annual-report.pdf")
+pdf_texts: list[str] = [p.extract_text().strip() for p in reader.pages]
 pdf_texts = [text for text in pdf_texts if text]
 # print(
 #     word_wrap(
@@ -55,12 +59,12 @@ from langchain_text_splitters import (
 # Define how to split the text:
 #   - Split the text into smaller chunks using character and token based splitters
 #   - First splits by paragraph, then by sentences, and finally by tokens
-character_splitter = RecursiveCharacterTextSplitter(
+character_splitter: RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter(
     separators=["\n\n", "\n", ". ", " ", ""], chunk_size=1000, chunk_overlap=0
 )
 
 # use the character splitter to split the pdf text into smaller chunks
-character_split_texts = character_splitter.split_text("\n\n".join(pdf_texts))
+character_split_texts: list[str] = character_splitter.split_text("\n\n".join(pdf_texts))
 # print(word_wrap(character_split_texts[10]))
 # print(f"\nTotal chunks: {len(character_split_texts)}")
 # returns 410 chunks
@@ -69,10 +73,10 @@ character_split_texts = character_splitter.split_text("\n\n".join(pdf_texts))
 ################################################################################################
 ### Split chunks into maximum token size, as LLMs have token limits
 ################################################################################################
-token_splitter = SentenceTransformersTokenTextSplitter(
+token_splitter: SentenceTransformersTokenTextSplitter = SentenceTransformersTokenTextSplitter(
     chunk_overlap=0, tokens_per_chunk=256
 )
-token_split_texts = []
+token_split_texts: list[str] = []
 for text in character_split_texts:
     token_split_texts += token_splitter.split_text(text)
 
@@ -88,24 +92,24 @@ import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
 # Define the embedding function for the Chroma database
-embedding_function = SentenceTransformerEmbeddingFunction()
+embedding_function: SentenceTransformerEmbeddingFunction = SentenceTransformerEmbeddingFunction()
 # print(embedding_function([token_split_texts[10]]))
 
 # Define the Chroma client and collection
-chroma_client = chromadb.Client()
-chroma_collection = chroma_client.create_collection(
+chroma_client: ClientAPI = chromadb.Client()
+chroma_collection: chromadb.Collection = chroma_client.create_collection(
     "microsoft-collection", embedding_function=embedding_function
 )
 
 # chrome creates vector embeddings for the token_split_texts then stores them in the collection
-ids = [str(i) for i in range(len(token_split_texts))]
+ids: list[str] = [str(i) for i in range(len(token_split_texts))]
 chroma_collection.add(ids=ids, documents=token_split_texts)
 chroma_collection.count() # returns 419, the total number of vectors stored in the collection
 
 # test chroma collection with a query
-query = "What was the total revenue for the year?"
-results = chroma_collection.query(query_texts=[query], n_results=5)
-retrieved_documents = results["documents"][0]
+query: str = "What was the total revenue for the year?"
+results: chromadb.QueryResult = chroma_collection.query(query_texts=[query], n_results=5)
+retrieved_documents: list[str] = results["documents"][0]
 
 # for document in retrieved_documents:
 #     print(word_wrap(document))
@@ -126,7 +130,7 @@ def augment_query_generated(query: str, model: str = OLLAMA_MODEL) -> str:
     Returns:
         The generated answer text.
     """
-    prompt = ChatPromptTemplate.from_messages(
+    prompt: ChatPromptTemplate = ChatPromptTemplate.from_messages(
         [
             (
                 "system",
@@ -137,21 +141,21 @@ def augment_query_generated(query: str, model: str = OLLAMA_MODEL) -> str:
             ("human", "{query}"),
         ]
     )
-    llm = ChatOllama(
+    llm: ChatOllama = ChatOllama(
         model=model,
         base_url=OLLAMA_BASE_URL,
         client_kwargs={"timeout": TIMEOUT_SECONDS},
     )
     # LCEL chain: fill the prompt -> call the model -> pull out the reply text
-    chain = prompt | llm | StrOutputParser()
+    chain: RunnableSerializable[dict, str] = prompt | llm | StrOutputParser()
     return chain.invoke({"query": query})
 
 ################################################################################################
 ###  Join original query with hypothetical answer (hullicination) and 
 ################################################################################################
-original_query = "What was the total profit for the year, and how does it compare to the previous year?"
+original_query: str = "What was the total profit for the year, and how does it compare to the previous year?"
 try:
-    hypothetical_answer = augment_query_generated(original_query)
+    hypothetical_answer: str = augment_query_generated(original_query)
 except (ConnectionError, httpx.ConnectError):
     sys.exit(f"Error: could not connect to Ollama at {OLLAMA_BASE_URL}. Is `ollama serve` running?")
 except httpx.TimeoutException:
@@ -160,7 +164,7 @@ except ollama.ResponseError as exc:
     # e.g. 404 when the model has not been pulled: `ollama pull llama3.2`
     sys.exit(f"Error: Ollama returned {exc.status_code}: {exc.error}")
 
-joint_query = f"{original_query} {hypothetical_answer}"
+joint_query: str = f"{original_query} {hypothetical_answer}"
 print(word_wrap(joint_query))
 
 
@@ -180,22 +184,24 @@ retrieved_documents = results["documents"][0]
 ###  Takes embeddings that already exist (retrieved docs, original query, augmented query)
 ###  And plots all into a shared 2D UMAP
 ################################################################################################
-embeddings = chroma_collection.get(include=["embeddings"])["embeddings"]
-umap_transform = umap.UMAP(random_state=0, transform_seed=0).fit(embeddings)
-projected_dataset_embeddings = project_embeddings(embeddings, umap_transform)
+embeddings: chromadb.Embeddings | PyEmbeddings | np.ndarray | None = chroma_collection.get(include=["embeddings"])["embeddings"]
+umap_transform: umap.UMAP = umap.UMAP(random_state=0, transform_seed=0).fit(embeddings)
+projected_dataset_embeddings: np.ndarray = project_embeddings(embeddings, umap_transform)
 
 
-retrieved_embeddings = results["embeddings"][0]
-original_query_embedding = embedding_function([original_query])
-augmented_query_embedding = embedding_function([joint_query])
+# Indexed into one query's embeddings; mirrors chromadb's own
+# `QueryResult["embeddings"]` element type.
+retrieved_embeddings: chromadb.Embeddings | PyEmbeddings | np.ndarray = results["embeddings"][0]
+original_query_embedding: list[np.ndarray] = embedding_function([original_query])
+augmented_query_embedding: list[np.ndarray] = embedding_function([joint_query])
 
-projected_original_query_embedding = project_embeddings(
+projected_original_query_embedding: np.ndarray = project_embeddings(
     original_query_embedding, umap_transform
 )
-projected_augmented_query_embedding = project_embeddings(
+projected_augmented_query_embedding: np.ndarray = project_embeddings(
     augmented_query_embedding, umap_transform
 )
-projected_retrieved_embeddings = project_embeddings(
+projected_retrieved_embeddings: np.ndarray = project_embeddings(
     retrieved_embeddings, umap_transform
 )
 

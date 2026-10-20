@@ -9,10 +9,12 @@ so the label is the thing that tells you where to look first.
     operations  the answer is right -- the system around it is not
 """
 
-LABELS = ("retrieval", "context", "generation", "operations")
+from typing import Any
 
-LATENCY_BUDGET_S = 3.0     # anything slower than this is not shippable
-COST_BUDGET_USD = 0.01     # per query
+LABELS: tuple[str, str, str, str] = ("retrieval", "context", "generation", "operations")
+
+LATENCY_BUDGET_S: float = 3.0     # anything slower than this is not shippable
+COST_BUDGET_USD: float = 0.01     # per query
 
 # --- The four traces --------------------------------------------------------
 # gold_chunk : the chunk id that actually holds the answer (a direct keyword
@@ -21,7 +23,7 @@ COST_BUDGET_USD = 0.01     # per query
 # in_context : chunk ids that reached the model COMPLETE. A chunk cut in half
 #              by truncation is not in this list.
 
-TRACE_A = {
+TRACE_A: dict[str, Any] = {
     "question": "What was the operating margin for the cloud segment?",
     "gold_chunk": "report#p15", "gold_fact": "31%",
     "retrieved": [{"id": "report#p12", "score": 0.81, "text": "cloud demand was strong across enterprise customers"},
@@ -32,7 +34,7 @@ TRACE_A = {
     "latency_s": 1.8, "cost_usd": 0.004, "index_stale": False,
 }
 
-TRACE_B = {
+TRACE_B: dict[str, Any] = {
     "question": "What is the retention period for customer support recordings?",
     "gold_chunk": "privacy#s2", "gold_fact": "90 days",
     "retrieved": [{"id": "hr#s3", "score": 0.74, "text": "employee records are retained for seven years"},
@@ -43,7 +45,7 @@ TRACE_B = {
     "latency_s": 2.1, "cost_usd": 0.005, "index_stale": False,
 }
 
-TRACE_C = {
+TRACE_C: dict[str, Any] = {
     "question": "How many regional offices does the company operate?",
     "gold_chunk": "handbook#p04", "gold_fact": "14",
     "retrieved": [{"id": "handbook#p04", "score": 0.88, "text": "the company operates 14 regional offices"},
@@ -54,7 +56,7 @@ TRACE_C = {
     "latency_s": 1.6, "cost_usd": 0.004, "index_stale": False,
 }
 
-TRACE_D = {
+TRACE_D: dict[str, Any] = {
     "question": "What is the current parental leave policy?",
     "gold_chunk": "hr#s7", "gold_fact": "12 weeks",
     "retrieved": [{"id": "hr#s7", "score": 0.91, "text": "eligible employees may take up to 12 weeks of paid parental leave"},
@@ -65,7 +67,7 @@ TRACE_D = {
     "latency_s": 11.4, "cost_usd": 0.021, "index_stale": True,   # source now says 16 weeks; index built in March
 }
 
-TRACES = {"A": TRACE_A, "B": TRACE_B, "C": TRACE_C, "D": TRACE_D}
+TRACES: dict[str, dict[str, Any]] = {"A": TRACE_A, "B": TRACE_B, "C": TRACE_C, "D": TRACE_D}
 
 
 def classify(trace: dict) -> str:
@@ -76,7 +78,7 @@ def classify(trace: dict) -> str:
 
     TODO: Trace B is ambiguous. State here which label you chose for it and why.
     """
-    retrieved_ids = [chunk["id"] for chunk in trace["retrieved"]]
+    retrieved_ids: list[Any] = [chunk["id"] for chunk in trace["retrieved"]]
 
     retrieved_ids = [chunk["id"] for chunk in trace["retrieved"]]
 

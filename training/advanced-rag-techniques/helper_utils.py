@@ -1,27 +1,32 @@
 # helper_utils.py
+from typing import Any, Callable
+
 import numpy as np
 import chromadb
 import pandas as pd
-from pypdf import PdfReader
-import numpy as np
+import umap
+from pypdf import PdfReader, PageObject
 
 
-def project_embeddings(embeddings, umap_transform):
+def project_embeddings(embeddings: Any, umap_transform: umap.UMAP) -> np.ndarray:
     """
     Projects the given embeddings using the provided UMAP transformer.
 
     Args:
-    embeddings (numpy.ndarray): The embeddings to project.
+    embeddings (numpy.ndarray): The embeddings to project. Callers in this
+        project pass numpy arrays as well as chromadb's own (partly Optional)
+        Embeddings/PyEmbeddings result types, so `Any` is the honest type here
+        rather than a narrower one that would reject those real call sites.
     umap_transform (umap.UMAP): The trained UMAP transformer.
 
     Returns:
     numpy.ndarray: The projected embeddings.
     """
-    projected_embeddings = umap_transform.transform(embeddings)
+    projected_embeddings: np.ndarray = umap_transform.transform(embeddings)
     return projected_embeddings
 
 
-def word_wrap(text, width=87):
+def word_wrap(text: str, width: int = 87) -> str:
     """
     Wraps the given text to the specified width.
 
@@ -35,7 +40,7 @@ def word_wrap(text, width=87):
     return "\n".join([text[i : i + width] for i in range(0, len(text), width)])
 
 
-def extract_text_from_pdf(file_path):
+def extract_text_from_pdf(file_path: str) -> str:
     """
     Extracts text from a PDF file.
 
@@ -45,16 +50,18 @@ def extract_text_from_pdf(file_path):
     Returns:
     str: The extracted text.
     """
-    text = []
+    text: list[str] = []
     with open(file_path, "rb") as f:
-        pdf = PdfReader(f)
+        pdf: PdfReader = PdfReader(f)
         for page_num in range(pdf.get_num_pages()):
-            page = pdf.get_page(page_num)
+            page: PageObject = pdf.get_page(page_num)
             text.append(page.extract_text())
     return "\n".join(text)
 
 
-def load_chroma(filename, collection_name, embedding_function):
+def load_chroma(
+    filename: str, collection_name: str, embedding_function: Callable[[str], Any]
+) -> chromadb.Collection:
     """
     Loads a document from a PDF, extracts text, generates embeddings, and stores it in a Chroma collection.
 
@@ -67,21 +74,21 @@ def load_chroma(filename, collection_name, embedding_function):
     chroma.Collection: The Chroma collection with the document embeddings.
     """
     # Extract text from the PDF
-    text = extract_text_from_pdf(filename)
+    text: str = extract_text_from_pdf(filename)
 
     # Split text into paragraphs or chunks
-    paragraphs = text.split("\n\n")
+    paragraphs: list[str] = text.split("\n\n")
 
     # Generate embeddings for each chunk
-    embeddings = [embedding_function(paragraph) for paragraph in paragraphs]
+    embeddings: list[Any] = [embedding_function(paragraph) for paragraph in paragraphs]
 
     # Create a DataFrame to store text and embeddings
-    data = {"text": paragraphs, "embeddings": embeddings}
-    df = pd.DataFrame(data)
+    data: dict[str, list[Any]] = {"text": paragraphs, "embeddings": embeddings}
+    df: pd.DataFrame = pd.DataFrame(data)
 
     # Create or load the Chroma collection
 
-    collection = chromadb.Client().create_collection(collection_name)
+    collection: chromadb.Collection = chromadb.Client().create_collection(collection_name)
 
     # Add the data to the Chroma collection
     for ids, row in df.iterrows():
