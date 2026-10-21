@@ -17,6 +17,7 @@ Setup: local Ollama server (same setup as experiments/ai/01-llm-api)
 """
 
 import sys
+from pathlib import Path
 from typing import Any, NamedTuple
 
 import chromadb
@@ -48,7 +49,10 @@ OLLAMA_BASE_URL: str = "http://localhost:11434"
 OLLAMA_MODEL: str = "llama3.2"
 TIMEOUT_SECONDS: int = 60
 
-PDF_PATH: str = "data/microsoft-annual-report.pdf"
+# Resolved relative to this file (not the process cwd) so the script works
+# regardless of how/where it's launched from (e.g. VS Code debugger defaults
+# to the workspace root as cwd).
+PDF_PATH: str = str(Path(__file__).resolve().parent / "data" / "microsoft-annual-report.pdf")
 COLLECTION_NAME: str = "microsoft-collection"
 
 CHARACTER_CHUNK_SEPARATORS: list[str] = ["\n\n", "\n", ". ", " ", ""]
