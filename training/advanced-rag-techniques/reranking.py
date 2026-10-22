@@ -9,25 +9,28 @@ Pipeline overview:
 3. Scenario B - multi-query retrieval with re-ranking and generation: this is
    a full RAG pass. It retrieves documents for the original query plus
    several related queries, de-duplicates them, re-ranks the unique set with
-   the cross-encoder, and feeds the top results to an OpenAI chat model to
-   synthesize a final answer (the "G" step).
+   the cross-encoder, and feeds the top results to a local Ollama chat model
+   to synthesize a final answer (the "G" step).
 
-Setup: an `OPENAI_API_KEY` must be available, either in the environment or in
-a local `.env` file (see python-dotenv).
+Setup: local Ollama server (same setup as experiments/ai/01-llm-api)
+    brew install ollama  ->  ollama serve  ->  ollama pull llama3.2
 """
 
-import os
+import sys
 from pathlib import Path
 
+import httpx
 import numpy as np
+import ollama
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
-from dotenv import load_dotenv
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableSerializable
+from langchain_ollama import ChatOllama
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
     SentenceTransformersTokenTextSplitter,
 )
-from openai import OpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 from pypdf import PdfReader
 from sentence_transformers import CrossEncoder
 
@@ -64,7 +67,10 @@ GENERATED_QUERIES: list[str] = [
 MULTI_QUERY_RESULT_COUNT: int = 10
 TOP_RERANKED_DOCUMENT_COUNT: int = 5
 
-ANSWER_MODEL: str = "gpt-5.6-luna"
+OLLAMA_BASE_URL: str = "http://localhost:11434"
+OLLAMA_MODEL: str = "llama3.2"
+TIMEOUT_SECONDS: int = 60
+
 ANSWER_SYSTEM_PROMPT: str = (
     "You are a knowledgeable financial research assistant. "
     "Your users are inquiring about an annual report."
@@ -250,45 +256,60 @@ def select_top_reranked_documents(
     return [documents[index] for index in top_indices]
 
 
-def build_openai_client() -> OpenAI:
-    """Builds an OpenAI client, loading credentials from the environment.
-
-    Returns:
-        An OpenAI client configured with `OPENAI_API_KEY`.
-    """
-    load_dotenv()
-    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
 def generate_answer_from_context(
-    client: OpenAI, query: str, context: str, model: str = ANSWER_MODEL
+    query: str, context: str, model: str = OLLAMA_MODEL
 ) -> list[str]:
-    """Asks an OpenAI chat model to answer `query` using the given context.
+    """Asks a local Ollama chat model to answer `query` using the given context.
 
     Args:
-        client: The OpenAI client to send the request through.
         query: The user's question.
         context: The re-ranked document text to answer the question from.
-        model: The chat model to use.
+        model: The Ollama model name; it must already be pulled.
 
     Returns:
         The model's reply, split into lines.
-
-    Raises:
-        ValueError: If the model returned no content.
     """
-    messages: list[ChatCompletionMessageParam] = [
-        {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
-        {
-            "role": "user",
-            "content": f"based on the following context:\n\n{context}\n\nAnswer the query: '{query}'",
-        },
-    ]
-    response: ChatCompletion = client.chat.completions.create(model=model, messages=messages)
-    content: str | None = response.choices[0].message.content
-    if content is None:
-        raise ValueError(f"OpenAI model '{model}' returned no content.")
+    prompt: ChatPromptTemplate = ChatPromptTemplate.from_messages(
+        [
+            ("system", ANSWER_SYSTEM_PROMPT),
+            (
+                "human",
+                "based on the following context:\n\n{context}\n\nAnswer the query: '{query}'",
+            ),
+        ]
+    )
+    llm: ChatOllama = ChatOllama(
+        model=model,
+        base_url=OLLAMA_BASE_URL,
+        client_kwargs={"timeout": TIMEOUT_SECONDS},
+    )
+    # LCEL chain: fill the prompt -> call the model -> pull out the reply text
+    chain: RunnableSerializable[dict, str] = prompt | llm | StrOutputParser()
+    content: str = chain.invoke({"context": context, "query": query})
     return content.split("\n")
+
+
+def generate_answer_from_context_or_exit(query: str, context: str) -> list[str]:
+    """Generates the final answer, exiting with a clear message on failure.
+
+    Args:
+        query: The user's question.
+        context: The re-ranked document text to answer the question from.
+
+    Returns:
+        The model's reply, split into lines.
+    """
+    try:
+        return generate_answer_from_context(query, context)
+    except (ConnectionError, httpx.ConnectError):
+        sys.exit(
+            f"Error: could not connect to Ollama at {OLLAMA_BASE_URL}. Is `ollama serve` running?"
+        )
+    except httpx.TimeoutException:
+        sys.exit(f"Error: Ollama did not respond within {TIMEOUT_SECONDS}s.")
+    except ollama.ResponseError as exc:
+        # e.g. 404 when the model has not been pulled: `ollama pull llama3.2`
+        sys.exit(f"Error: Ollama returned {exc.status_code}: {exc.error}")
 
 
 def main() -> None:
@@ -332,8 +353,7 @@ def main() -> None:
     )
     context: str = "\n\n".join(top_documents)
 
-    client: OpenAI = build_openai_client()
-    final_answer: list[str] = generate_answer_from_context(client, ORIGINAL_QUERY, context)
+    final_answer: list[str] = generate_answer_from_context_or_exit(ORIGINAL_QUERY, context)
     print("Final Answer:")
     print(final_answer)
 

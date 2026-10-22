@@ -2,6 +2,13 @@
 
 Course-level changes, newest first. Dates are spoken in lectures, never rendered on slides.
 
+## 2026-10-22
+
+**Code**
+- `reranking.py` now generates its final answer with a local Ollama `llama3.2` model via LangChain `ChatOllama`, matching `expansion_answer.py` and `expansion_queries.py`. It no longer calls OpenAI, so no `OPENAI_API_KEY` or `.env` file is needed anywhere in the project.
+- `build_openai_client()` removed; `generate_answer_from_context()` no longer takes a client argument, and the new `generate_answer_from_context_or_exit()` maps connection, timeout and `ollama.ResponseError` failures to clear `sys.exit` messages.
+- `openai` and `python-dotenv` dropped from `requirements.txt`; nothing imports them now.
+
 ## 2026-09-15
 
 **Code**

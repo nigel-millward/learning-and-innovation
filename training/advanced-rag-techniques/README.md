@@ -34,16 +34,12 @@ uv pip install -r requirements.txt
 Without activating, point `uv` at the interpreter instead:
 `uv pip install --python ~/.virtualenv/advanced-rag-techniques-3.1.2/bin/python <package>`.
 
-Create a `.env` file in the project root with your OpenAI key (used by `expansion_queries.py` and
-`reranking.py`; `expansion_answer.py` runs locally on Ollama and does not need it):
+No API key and no `.env` file are needed. Every script runs its chat model locally on Ollama, and
+embeddings are local `sentence-transformers`.
 
-```
-OPENAI_API_KEY=sk-...
-```
+### Ollama (for `expansion_answer.py`, `expansion_queries.py` and `reranking.py`)
 
-### Ollama (for `expansion_answer.py`)
-
-`expansion_answer.py` generates its hypothetical answer with a local `llama3.2` model served by
+These scripts generate text with a local `llama3.2` model served by
 [Ollama](https://ollama.com), called through LangChain's `ChatOllama` (`langchain-ollama`). This is
 the same Ollama setup as `experiments/ai/01-llm-api`. No API key, no cost, and nothing leaves your
 machine.
@@ -91,7 +87,7 @@ machine.
    close the window. To run it without a window (for example over SSH), use
    `MPLBACKEND=Agg python expansion_answer.py`.
 
-The server URL, model and timeout are constants at the top of `expansion_answer.py`
+The server URL, model and timeout are constants at the top of each script
 (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `TIMEOUT_SECONDS`). To try another model, `ollama pull <name>`
 and change `OLLAMA_MODEL`. Stop the server with `Ctrl+C` in its terminal (or quit the desktop app).
 
@@ -125,18 +121,17 @@ There is nothing to clean up between runs.
 
 | Piece | What the code uses |
 |---|---|
-| Chat model | `expansion_answer.py`: local Ollama `llama3.2` via LangChain `ChatOllama` (`OLLAMA_MODEL` constant). `expansion_queries.py`, `reranking.py`: OpenAI `gpt-5.6-luna` (default argument on the generation functions; change it there) |
+| Chat model | Local Ollama `llama3.2` via LangChain `ChatOllama`, in `expansion_answer.py`, `expansion_queries.py` and `reranking.py` (`OLLAMA_MODEL` constant; change it there) |
 | Embeddings | Local `sentence-transformers` via Chroma's default embedding function. No API key needed for retrieval |
 | Vector store | Chroma, in memory |
 | Re-ranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` from `sentence-transformers` |
 | DPR | `facebook/dpr-question_encoder-single-nq-base` and `facebook/dpr-ctx_encoder-single-nq-base` from `transformers` |
 | Chunking | LangChain `RecursiveCharacterTextSplitter` then `SentenceTransformersTokenTextSplitter` |
 
-**Model note, September 2026.** The scripts used to default to `gpt-3.5-turbo`, which OpenAI is
-retiring on 23 October 2026. They now default to `gpt-5.6-luna`. If you cloned before then, pull
-the latest. If OpenAI has moved on again by the time you read this, change the `model=` default in
-the generation functions and everything else keeps working. `expansion_answer.py` has since moved
-to a local Ollama model and no longer calls OpenAI.
+**Model note, October 2026.** The scripts used to call OpenAI and default to `gpt-3.5-turbo`, which
+OpenAI is retiring on 23 October 2026. They now all run a local Ollama model instead and no longer
+call OpenAI, so no API key is needed. To use a different local model, `ollama pull <name>` and
+change the `OLLAMA_MODEL` constant at the top of the script.
 
 ## Running the scripts
 
@@ -158,8 +153,7 @@ are the intermediate prints used on screen in the lectures; uncomment them to fo
 
 - **`could not connect to Ollama at http://localhost:11434`.** The Ollama server is not running. Start it with `ollama serve` (or open the Ollama app) and re-run.
 - **`Ollama returned 404: model 'llama3.2' not found`.** The model has not been pulled. Run `ollama pull llama3.2`.
-- **`Ollama did not respond within 60s`.** The first request after starting loads the model into memory and can be slow on a laptop. Re-run, or raise `TIMEOUT_SECONDS` in `expansion_answer.py`.
-- **`OPENAI_API_KEY` not found.** The `.env` file must sit in the project root, next to the scripts, and you must run the scripts from that folder.
+- **`Ollama did not respond within 60s`.** The first request after starting loads the model into memory and can be slow on a laptop. Re-run, or raise `TIMEOUT_SECONDS` in the script you are running.
 - **`No module named pip`.** Expected: the venv is uv-managed. Use `uv pip install ...` rather than `pip install ...`.
 - **`ModuleNotFoundError: No module named 'langchain_ollama'`.** The venv predates the Ollama switch. Run `uv pip install -r requirements.txt` with the venv active.
 - **Slow first run.** Model downloads from Hugging Face. Subsequent runs are fast.

@@ -1,15 +1,17 @@
 """Characterisation tests for reranking.py.
 
 These tests cover only the parts of the module that do not require a running
-Chroma/embedding pipeline, a downloaded cross-encoder model, or network
-access: pure data transformations and the OpenAI response handling. The rest
-of the module (PDF parsing, Chroma, cross-encoder scoring) is exercised by
-running the script manually per README.md, not by this suite.
+Chroma/embedding pipeline, a downloaded cross-encoder model, a running Ollama
+server, or network access: pure data transformations and the mapping from
+specific exceptions to `sys.exit` messages. The rest of the module (PDF
+parsing, Chroma, cross-encoder scoring) is exercised by running the script
+manually per README.md, not by this suite.
 """
 
+import httpx
 import numpy as np
+import ollama
 import pytest
-from openai.types.chat import ChatCompletion
 
 import reranking
 
@@ -41,38 +43,45 @@ def test_print_new_ordering_applies_start_index(capsys) -> None:
     assert printed_lines == ["New Ordering:", "2", "3", "1"]
 
 
-def test_generate_answer_from_context_returns_lines_on_success(monkeypatch) -> None:
-    def fake_create(*, model: str, messages: list) -> ChatCompletion:
-        return ChatCompletion.model_construct(
-            choices=[
-                type(
-                    "Choice",
-                    (),
-                    {"message": type("Message", (), {"content": "line one\nline two"})()},
-                )()
-            ]
-        )
+def test_generate_answer_from_context_returns_llm_output_on_success(monkeypatch) -> None:
+    monkeypatch.setattr(
+        reranking,
+        "generate_answer_from_context",
+        lambda query, context: ["line one", "line two"],
+    )
 
-    class FakeClient:
-        class chat:
-            class completions:
-                create = staticmethod(fake_create)
-
-    answer = reranking.generate_answer_from_context(FakeClient(), "a query", "some context")
+    answer = reranking.generate_answer_from_context_or_exit("a query", "some context")
 
     assert answer == ["line one", "line two"]
 
 
-def test_generate_answer_from_context_raises_on_missing_content() -> None:
-    def fake_create(*, model: str, messages: list) -> ChatCompletion:
-        return ChatCompletion.model_construct(
-            choices=[type("Choice", (), {"message": type("Message", (), {"content": None})()})()]
-        )
+@pytest.mark.parametrize(
+    ("raised_exception", "expected_message_fragment"),
+    [
+        (ConnectionError(), "could not connect to Ollama"),
+        (httpx.ConnectError("boom"), "could not connect to Ollama"),
+        (httpx.TimeoutException("boom"), "did not respond within"),
+    ],
+)
+def test_generate_answer_from_context_exits_with_clear_message_on_connection_failure(
+    monkeypatch, raised_exception, expected_message_fragment
+) -> None:
+    def raise_exception(query: str, context: str) -> list[str]:
+        raise raised_exception
 
-    class FakeClient:
-        class chat:
-            class completions:
-                create = staticmethod(fake_create)
+    monkeypatch.setattr(reranking, "generate_answer_from_context", raise_exception)
 
-    with pytest.raises(ValueError, match="returned no content"):
-        reranking.generate_answer_from_context(FakeClient(), "a query", "some context")
+    with pytest.raises(SystemExit, match=expected_message_fragment):
+        reranking.generate_answer_from_context_or_exit("a query", "some context")
+
+
+def test_generate_answer_from_context_exits_with_clear_message_on_ollama_response_error(
+    monkeypatch,
+) -> None:
+    def raise_response_error(query: str, context: str) -> list[str]:
+        raise ollama.ResponseError(error="model not found", status_code=404)
+
+    monkeypatch.setattr(reranking, "generate_answer_from_context", raise_response_error)
+
+    with pytest.raises(SystemExit, match="Ollama returned 404"):
+        reranking.generate_answer_from_context_or_exit("a query", "some context")
