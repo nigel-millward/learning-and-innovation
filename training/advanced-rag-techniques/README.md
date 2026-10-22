@@ -68,15 +68,26 @@ machine.
    ollama pull llama3.2
    ```
 
-4. **Check it works:**
+4. **Build the judge variant** (one-off, seconds; it reuses the `llama3.2` weights). Only
+   `reranking.py` needs it, for its RAG Triad report:
 
    ```bash
-   ollama list                       # llama3.2 should be listed
+   ollama create llama3.2-judge -f modelfiles/llama3.2-judge.Modelfile
+   ```
+
+   It raises the context to 16k tokens, because Ollama gives `llama3.2` 4096 by default and cuts
+   longer prompts off without an error. It also caps each verdict at 512 tokens, so a judge reply
+   that never ends costs seconds rather than minutes.
+
+5. **Check it works:**
+
+   ```bash
+   ollama list                       # llama3.2 and llama3.2-judge should be listed
    curl http://localhost:11434/api/generate \
      -d '{"model": "llama3.2", "prompt": "What is Snowflake?", "stream": false}'
    ```
 
-5. **Run the script** from this folder, with the venv active:
+6. **Run the script** from this folder, with the venv active:
 
    ```bash
    source ~/.virtualenv/advanced-rag-techniques-3.1.2/bin/activate
@@ -100,9 +111,10 @@ few minutes and a couple of GB the first time; after that they load from cache.
 |---|---|---|
 | 4 · Query Expansion with Generated Answers | `expansion_answer.py` | Asks the LLM for a hypothetical answer, appends it to the query, and retrieves with the joint query. Plots the original vs augmented query in embedding space |
 | 5 · Query Expansion with Multiple Queries | `expansion_queries.py` | Asks the LLM for five related questions, retrieves for all of them, and de-duplicates the union |
-| 6 · Re-Ranking with a Cross-Encoder | `reranking.py` | Retrieves a wide candidate set, then re-scores every candidate with `cross-encoder/ms-marco-MiniLM-L-6-v2` before generating the answer |
+| 6 · Re-Ranking with a Cross-Encoder | `reranking.py` | Retrieves a wide candidate set, then re-scores every candidate with `cross-encoder/ms-marco-MiniLM-L-6-v2` before generating the answer, then prints a TruLens RAG Triad report. The example of a script using `trulens_utils.py` |
 | 7 · Dense Passage Retrieval | `dpr_technique.py` | Encodes questions and passages with Facebook's DPR question and context encoders and ranks by cosine similarity |
 | shared | `helper_utils.py` | PDF text extraction, Chroma loading, text wrapping, UMAP projection for the embedding plots |
+| shared | `trulens_utils.py` | TruLens RAG Triad metrics (context relevance, groundedness, answer relevance, each 0 to 1; closer to 1 is better), the recorder a script wraps its pipeline in, and the terminal report. Used by `reranking.py` |
 
 Sections 1 to 3 (setup, RAG fundamentals, the RAG triad, naive RAG and its drawbacks) are concept
 lectures and have no separate script. Section 8 (contextual retrieval, late chunking, agentic RAG,
@@ -125,6 +137,7 @@ There is nothing to clean up between runs.
 | Embeddings | Local `sentence-transformers` via Chroma's default embedding function. No API key needed for retrieval |
 | Vector store | Chroma, in memory |
 | Re-ranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` from `sentence-transformers` |
+| Evaluation | [TruLens](https://www.trulens.org) RAG Triad, defined in `trulens_utils.py` and recorded by `reranking.py`. Judged by local Ollama `llama3.2-judge` through `trulens-providers-litellm` (`EVALUATION_MODEL` in `trulens_utils.py`). Every run is stored in `trulens.sqlite`, and the report's leaderboard compares runs and `APP_VERSION`s |
 | DPR | `facebook/dpr-question_encoder-single-nq-base` and `facebook/dpr-ctx_encoder-single-nq-base` from `transformers` |
 | Chunking | LangChain `RecursiveCharacterTextSplitter` then `SentenceTransformersTokenTextSplitter` |
 
@@ -154,6 +167,10 @@ are the intermediate prints used on screen in the lectures; uncomment them to fo
 - **`could not connect to Ollama at http://localhost:11434`.** The Ollama server is not running. Start it with `ollama serve` (or open the Ollama app) and re-run.
 - **`Ollama returned 404: model 'llama3.2' not found`.** The model has not been pulled. Run `ollama pull llama3.2`.
 - **`Ollama did not respond within 60s`.** The first request after starting loads the model into memory and can be slow on a laptop. Re-run, or raise `TIMEOUT_SECONDS` in the script you are running.
+- **`Ollama returned 404 for judge model 'llama3.2-judge'`.** The judge variant has not been built. Run `ollama create llama3.2-judge -f modelfiles/llama3.2-judge.Modelfile`.
+- **A score shows `NaN`.** The judge gave no reply TruLens could parse for that metric, so TruLens left it out rather than guess. Re-run; a stronger judge (set `EVALUATION_MODEL` in `trulens_utils.py`) makes it rarer.
+- **The leaderboard mixes old and new results.** It averages every run in `trulens.sqlite`. Bump `APP_VERSION` in `reranking.py` when you change its settings, or delete `trulens.sqlite` to start over.
+- **`ModuleNotFoundError: No module named 'trulens'`.** Run `uv pip install -r requirements.txt` with the venv active. The first groundedness run also downloads NLTK's `punkt_tab` sentence tokenizer.
 - **`No module named pip`.** Expected: the venv is uv-managed. Use `uv pip install ...` rather than `pip install ...`.
 - **`ModuleNotFoundError: No module named 'langchain_ollama'`.** The venv predates the Ollama switch. Run `uv pip install -r requirements.txt` with the venv active.
 - **Slow first run.** Model downloads from Hugging Face. Subsequent runs are fast.

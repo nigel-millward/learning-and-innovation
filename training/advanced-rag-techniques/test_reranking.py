@@ -85,3 +85,30 @@ def test_generate_answer_from_context_exits_with_clear_message_on_ollama_respons
 
     with pytest.raises(SystemExit, match="Ollama returned 404"):
         reranking.generate_answer_from_context_or_exit("a query", "some context")
+
+
+
+def test_reranking_rag_answers_from_the_top_reranked_documents(monkeypatch) -> None:
+    monkeypatch.setattr(
+        reranking,
+        "retrieve_documents_for_queries",
+        lambda collection, queries, n_results: {"documents": [["low", "high"], ["mid"]]},
+    )
+    monkeypatch.setattr(
+        reranking,
+        "score_query_document_pairs",
+        lambda cross_encoder, query, documents: np.array(
+            [{"low": 0.1, "mid": 0.5, "high": 0.9}[document] for document in documents]
+        ),
+    )
+    monkeypatch.setattr(reranking, "TOP_RERANKED_DOCUMENT_COUNT", 2)
+    monkeypatch.setattr(
+        reranking,
+        "generate_answer_from_context_or_exit",
+        lambda query, context: [f"answer from {context!r}"],
+    )
+    rag_app = reranking.RerankingRag(collection=None, cross_encoder=None)
+
+    answer = rag_app.query("a question")
+
+    assert answer == "answer from 'high\\n\\nmid'"

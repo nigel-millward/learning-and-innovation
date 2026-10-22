@@ -11,6 +11,13 @@ Pipeline overview:
    several related queries, de-duplicates them, re-ranks the unique set with
    the cross-encoder, and feeds the top results to a local Ollama chat model
    to synthesize a final answer (the "G" step).
+4. RAG Triad evaluation: TruLens records the Scenario B pass and scores it
+   on its three legs, each between 0 and 1 (closer to 1 is better), and the
+   script ends by printing them, plus a leaderboard across techniques:
+   - Context relevance: is each re-ranked document relevant to the query?
+   - Groundedness: is each sentence of the answer supported by the context?
+   - Answer relevance: does the answer address the query?
+   See trulens_utils.py for the judge and where runs are stored.
 
 Setup: local Ollama server (same setup as experiments/ai/01-llm-api)
     brew install ollama  ->  ollama serve  ->  ollama pull llama3.2
@@ -33,9 +40,13 @@ from langchain_text_splitters import (
 )
 from pypdf import PdfReader
 from sentence_transformers import CrossEncoder
+from trulens.apps.app import TruApp
+from trulens.core.otel.instrument import instrument
+from trulens.otel.semconv.trace import SpanAttributes
 
 import chromadb
 from helper_utils import word_wrap
+from trulens_utils import build_rag_triad_recorder, print_rag_triad_report, quiet_trulens_logging
 
 # Resolved relative to this file (not the process cwd) so the script works
 # regardless of how/where it's launched from (e.g. VS Code debugger defaults
@@ -75,6 +86,11 @@ ANSWER_SYSTEM_PROMPT: str = (
     "You are a knowledgeable financial research assistant. "
     "Your users are inquiring about an annual report."
 )
+
+# How this script's runs are labelled on the TruLens leaderboard. Bump the
+# version when you change the technique's settings, to compare the two.
+APP_NAME: str = "reranking"
+APP_VERSION: str = "v1"
 
 
 def load_pdf_page_texts(pdf_path: str) -> list[str]:
@@ -312,8 +328,88 @@ def generate_answer_from_context_or_exit(query: str, context: str) -> list[str]:
         sys.exit(f"Error: Ollama returned {exc.status_code}: {exc.error}")
 
 
+class RerankingRag:
+    """Scenario B as an app TruLens can trace.
+
+    Each `@instrument` method becomes a span in the TruLens record. The
+    RETRIEVAL span's return value is the context the RAG Triad judges, so
+    `retrieve` returns exactly the documents the answer is generated from.
+    """
+
+    def __init__(self, collection: chromadb.Collection, cross_encoder: CrossEncoder) -> None:
+        """Holds the index and re-ranker the pipeline uses.
+
+        Args:
+            collection: The Chroma collection to retrieve from.
+            cross_encoder: The cross-encoder to re-rank with.
+        """
+        self.collection = collection
+        self.cross_encoder = cross_encoder
+
+    @instrument(
+        span_type=SpanAttributes.SpanType.RETRIEVAL,
+        attributes={
+            SpanAttributes.RETRIEVAL.QUERY_TEXT: "query",
+            SpanAttributes.RETRIEVAL.RETRIEVED_CONTEXTS: "return",
+        },
+    )
+    def retrieve(self, query: str) -> list[str]:
+        """Retrieves for the query and related queries, then re-ranks.
+
+        Args:
+            query: The user's question.
+
+        Returns:
+            The top re-ranked documents, most relevant first.
+        """
+        queries: list[str] = [query] + GENERATED_QUERIES
+        multi_query_results: chromadb.QueryResult = retrieve_documents_for_queries(
+            self.collection, queries, MULTI_QUERY_RESULT_COUNT
+        )
+        unique_documents: list[str] = deduplicate_documents(multi_query_results["documents"])
+        multi_query_scores: np.ndarray = score_query_document_pairs(
+            self.cross_encoder, query, unique_documents
+        )
+        print_scores(multi_query_scores)
+        print_new_ordering(multi_query_scores, start_index=0)
+        return select_top_reranked_documents(
+            unique_documents, multi_query_scores, TOP_RERANKED_DOCUMENT_COUNT
+        )
+
+    @instrument(span_type=SpanAttributes.SpanType.GENERATION)
+    def generate(self, query: str, documents: list[str]) -> str:
+        """Generates and prints the final answer from the documents.
+
+        Args:
+            query: The user's question.
+            documents: The re-ranked documents to answer from.
+
+        Returns:
+            The answer text.
+        """
+        final_answer: list[str] = generate_answer_from_context_or_exit(
+            query, "\n\n".join(documents)
+        )
+        print("Final Answer:")
+        print(final_answer)
+        return "\n".join(final_answer)
+
+    @instrument()
+    def query(self, query: str) -> str:
+        """Runs one full RAG pass: retrieve, re-rank, generate.
+
+        Args:
+            query: The user's question.
+
+        Returns:
+            The answer text.
+        """
+        return self.generate(query, self.retrieve(query))
+
+
 def main() -> None:
     """Runs the cross-encoder re-ranking demo end to end."""
+    quiet_trulens_logging()
     page_texts: list[str] = load_pdf_page_texts(PDF_PATH)
     character_chunks: list[str] = split_into_character_chunks(page_texts)
     token_chunks: list[str] = split_into_token_chunks(character_chunks)
@@ -335,27 +431,12 @@ def main() -> None:
     print_new_ordering(single_query_scores, start_index=1)
 
     # Scenario B: multi-query retrieval, de-duplication, re-ranking, and
-    # answer generation from the top re-ranked documents.
-    queries: list[str] = [ORIGINAL_QUERY] + GENERATED_QUERIES
-    multi_query_results: chromadb.QueryResult = retrieve_documents_for_queries(
-        collection, queries, MULTI_QUERY_RESULT_COUNT
-    )
-    unique_documents: list[str] = deduplicate_documents(multi_query_results["documents"])
-
-    multi_query_scores: np.ndarray = score_query_document_pairs(
-        cross_encoder, ORIGINAL_QUERY, unique_documents
-    )
-    print_scores(multi_query_scores)
-    print_new_ordering(multi_query_scores, start_index=0)
-
-    top_documents: list[str] = select_top_reranked_documents(
-        unique_documents, multi_query_scores, TOP_RERANKED_DOCUMENT_COUNT
-    )
-    context: str = "\n\n".join(top_documents)
-
-    final_answer: list[str] = generate_answer_from_context_or_exit(ORIGINAL_QUERY, context)
-    print("Final Answer:")
-    print(final_answer)
+    # answer generation, recorded by TruLens and scored on the RAG Triad.
+    rag_app: RerankingRag = RerankingRag(collection, cross_encoder)
+    recorder: TruApp = build_rag_triad_recorder(rag_app, rag_app.query, APP_NAME, APP_VERSION)
+    with recorder as recording:
+        rag_app.query(ORIGINAL_QUERY)
+    print_rag_triad_report(recording)
 
 
 if __name__ == "__main__":

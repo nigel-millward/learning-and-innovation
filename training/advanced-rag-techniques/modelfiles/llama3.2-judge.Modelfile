@@ -1,0 +1,13 @@
+# llama3.2 configured as the RAG Triad judge in trulens_utils.py.
+#
+# num_ctx: Ollama otherwise loads llama3.2 with a 4096-token context and
+#   silently truncates longer prompts.
+# num_predict: a verdict is ~100-200 tokens. Forced into JSON, a small model
+#   sometimes never stops generating; this cap ends such a reply (TruLens then
+#   records no score for it) instead of letting it run for minutes.
+#
+# Build once per machine, from this folder:
+#     ollama create llama3.2-judge -f modelfiles/llama3.2-judge.Modelfile
+FROM llama3.2
+PARAMETER num_ctx 16384
+PARAMETER num_predict 512
