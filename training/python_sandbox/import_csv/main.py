@@ -20,7 +20,7 @@ def read_csv_file_with_csv_reader():
     
     # create a list of list
     with open(input_file_path, "r") as csv_file:
-        data_set = csv.reader(csv_file)
+        data_set: csv.reader = csv.reader(csv_file)
         data:list = []
         for row in data_set:
             data.append(row)
