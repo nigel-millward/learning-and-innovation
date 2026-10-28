@@ -1,5 +1,5 @@
 import yaml
-import path
+from pathlib import Path
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -14,7 +14,7 @@ class UserValidationError(Exception):
         super().__init__(f"{len(errors)} validation error(s):\n  - " + "\n  - ".join(errors))
 
 
-FILE_PATH = path.Path(__file__).parent / "test_data/user.yaml"
+FILE_PATH = Path(__file__).parent / "test_data/user.yaml"
 REQUIRED_FIELDS = {"id", "name", "age", "is_active", "score", "role"}
 
 
@@ -63,36 +63,37 @@ def validate_data_types(users: list) -> list[str]:
     
     for index, user in enumerate(users, start=1):
         user_ref = f"id={user.get('id', f'index {index}')}"
-        for field, type in expected.items():    
-            if field in user and not isinstance(user[field], type):
+        for field, expected_type in expected.items():
+            if field in user and not isinstance(user[field], expected_type):
                 errors.append(
-                    f"User {user_ref}: field '{field}' should be {type.__name__}, "
+                    f"User {user_ref}: field '{field}' should be {expected_type.__name__}, "
                     f"got {type(user[field]).__name__}"
                 )
     
     return errors
 
-def validate_ranges(data: dict) -> None:
-    pass
+def validate_ranges(users: list) -> list[str]:
+    return []
 
-def validate_business_rules(data: dict) -> None:
-    pass
+def validate_business_rules(users: list) -> list[str]:
+    return []
 
 def validate(users: list) -> None:
-    errors:list[str] = []
-    
-    for check in (validate_required_fields, validate_data_types):
+    errors: list[str] = []
+
+    for check in (validate_required_fields, validate_data_types,
+                  validate_ranges, validate_business_rules):
         errors.extend(check(users))
-        
+
     if errors:
-        raise (UserValidationError(errors))
+        raise UserValidationError(errors)
 
 def main():
     try:
         parsed_users = parse_users(FILE_PATH)
-        validate(parse_users)
-    except YamlParseError:
-        logging.exception("Could not parse users")
+        validate(parsed_users)
+    except (YamlParseError, UserValidationError):
+        logging.exception("Could not process users")
         raise SystemExit(1)
     
     logging.info("Parsed %d valid users", len(parsed_users))
