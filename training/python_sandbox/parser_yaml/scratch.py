@@ -54,6 +54,13 @@ COMPANIES = {
     },
 }
 
+EMAIL_ADDRESS = {
+    "nigel@bbc.com",
+    "bob@gmail.com",
+    "clive@gmail.com",
+    "allan@outlook.com",
+}
+
 
 def list_comprehension_practice() -> None:
     user_names: list[str] = [user["name"] for user in USERS]
@@ -78,9 +85,21 @@ def dictionary_comprehension_practice() -> None:
     logging.info(f"test dict loop: {company_websites}")
 
 
+def set_comprehension_practice() -> None:
+    email_client: set[str] = {email.split("@")[1] for email in EMAIL_ADDRESS}
+    logging.info(f"test set: {email_client}")
+
+    email_client_loop: set[str] = set()
+    for email in EMAIL_ADDRESS:
+        domain = email.split("@")[1]
+        email_client_loop.add(domain)
+    logging.info(f"test set loop: {email_client_loop}")
+
+
 def main():
     list_comprehension_practice()
     dictionary_comprehension_practice()
+    set_comprehension_practice()
 
 
 if __name__ == "__main__":
