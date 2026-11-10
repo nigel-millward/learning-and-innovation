@@ -27,7 +27,7 @@ Each subdirectory is a **self-contained project** with its own toolchain and dep
 └── shared/
 ```
 
-`projects/` and `templates/` exist but are currently empty.
+`templates/` exists but is currently empty.
 
 ---
 
@@ -69,7 +69,9 @@ Each subdirectory is a **self-contained project** with its own toolchain and dep
 
 ### projects/
 
-Empty. Nothing has yet been promoted from `experiments/`.
+| Directory | Focus |
+|---|---|
+| `confluence-indexing-pipeline/` | Airflow 3 DAG that incrementally indexes Confluence into PostgreSQL/pgvector for RAG (Ollama locally; OpenAI/Bedrock hosted) |
 
 ---
 

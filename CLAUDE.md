@@ -12,7 +12,7 @@ Work is grouped by **maturity**, not by technology. `README.md` is the authorita
 |---|---|
 | `training/` | Courses, tutorials, labs, vendor docs — reproducing existing material |
 | `experiments/` | Proof-of-concepts answering "can this work?" |
-| `projects/` | Maintained solutions someone depends on (currently empty) |
+| `projects/` | Maintained solutions someone depends on |
 | `templates/` | Boilerplate for starting new work (currently empty) |
 | `shared/` | Reference notes and utilities used across the above |
 
@@ -39,6 +39,7 @@ Each Python project has its **own `requirements.txt`** and is meant to run in it
 | `training/snowflake_sql_commands/` | SnowPro exam-prep SQL (DDL/DML/DQL/hands-on) | Not a runnable project — execute statements manually in Snowflake. |
 | `training/snowpark/` | Snowflake Snowpark Python API | `SnowflakeSession` (`src/libs/session.py`) holds connection params with **placeholder creds** (`<user_account>`, `<password>`) — fill in locally to run; never commit real credentials. |
 | `training/terraform/` | Terraform, AWS provider 4.67.0 | `terraform init / plan / apply / destroy`. State is **no longer committed** (`*.tfstate` is gitignored); `.terraform.lock.hcl` **is** committed deliberately. |
+| `projects/confluence-indexing-pipeline/` | Python 3.11+, Airflow 3, pgvector, Ollama / OpenAI / Bedrock; installable package | From the project dir: `pip install -e ".[dev,airflow]"`, `pytest` (unit; Airflow-dependent DAG test skips without Airflow), `ruff check . && mypy src`. Local stack: `docker compose -f deployment/docker-compose.yml up -d`, `ollama pull nomic-embed-text`, `confluence-indexer migrate`, then `airflow standalone` with `AIRFLOW__CORE__DAGS_FOLDER=src/confluence_indexer/dags` or `confluence-indexer run`. pgvector tests: `PGVECTOR_TEST_DSN=... pytest -m integration`. All SQL lives in `src/confluence_indexer/sql/`, not inline in Python. |
 | `experiments/amazon-q/` | Java (`java/`, Maven, Java 11) + Python (`python/`) demos | Example code only (incl. intentional "bad" vs "fixed-by-AI" samples). `mvn package` in `java/`. |
 | `shared/architect/`, `shared/docker/` | Reference notes only | `architect/` is markdown/text resources; `docker/` is command notes plus AWS-credential startup shell scripts. No build. |
 
@@ -60,5 +61,5 @@ Most subprojects are single-purpose scripts. Two have structure that spans enoug
 - **Ruff is configured but broken.** `training/dagster_university/pyproject.toml` sets `[tool.ruff] extend = "../../pyproject.toml"`, which now resolves to a repo-root `pyproject.toml` that does not exist, so `ruff check` exits with a config error. Either create that root file or drop the `extend` line. This is the same class of breakage as the `.gitignore` anchoring below — a relative path that silently changed meaning when projects moved a level deeper.
 - **Java projects target Java 11** (both Maven `pom.xml` files), though a newer JDK is installed locally.
 - **Naming is inconsistent by history.** New work should be lowercase-with-hyphens; existing underscore names (`aes_decryption`, `dbt_intro`, `python_versions`) are being left alone. See the README's naming guidelines.
-- **Empty directories are held open with `.gitkeep`.** Git tracks no empty directory, so `projects/`, `templates/`, `training/ai/*` and other intentional scaffolds each carry an empty `.gitkeep`. Keep it when adding real files to one of those directories is still pending; delete it once the directory has content.
+- **Empty directories are held open with `.gitkeep`.** Git tracks no empty directory, so `templates/`, `training/ai/*` and other intentional scaffolds each carry an empty `.gitkeep`. Keep it when adding real files to one of those directories is still pending; delete it once the directory has content.
 - **`.user.yml` is ignored, `.test_env` is not.** Both dbt projects generate `.user.yml` (a local anonymous-usage id) — ignored repo-wide. `.test_env` holds non-secret Snowflake account/warehouse/role names and is committed deliberately.

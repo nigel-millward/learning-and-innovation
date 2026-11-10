@@ -1,0 +1,32 @@
+# Local stack: PostgreSQL + pgvector, and LocalStack standing in for S3, SNS,
+# CloudWatch and Secrets Manager. Ollama runs on the host (`ollama serve`).
+#
+#   docker compose -f deployment/docker-compose.yml up -d
+services:
+  pgvector:
+    image: pgvector/pgvector:0.8.0-pg17
+    environment:
+      POSTGRES_USER: indexer
+      POSTGRES_PASSWORD: indexer
+      POSTGRES_DB: confluence_index
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgvector-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U indexer -d confluence_index"]
+      interval: 5s
+      retries: 10
+
+  localstack:
+    image: localstack/localstack:4.0
+    environment:
+      SERVICES: s3,sns,cloudwatch,secretsmanager
+      AWS_DEFAULT_REGION: eu-west-2
+    ports:
+      - "127.0.0.1:4566:4566"
+    volumes:
+      - ./localstack/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh:ro
+
+volumes:
+  pgvector-data:

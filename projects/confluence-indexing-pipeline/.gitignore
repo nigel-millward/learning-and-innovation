@@ -1,0 +1,11 @@
+# Tool caches, scoped to this project.
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Local Airflow home when running `airflow standalone` from this directory.
+airflow-home/
