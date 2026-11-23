@@ -45,10 +45,10 @@ def config() -> PipelineConfig:
         embedding=EmbeddingConfig(
             provider="openai", model="text-embedding-3-large", dimensions=DIMENSIONS, api_key="k"
         ),
-        database=DatabaseConfig(dsn="postgresql://unused"),
+        database=DatabaseConfig(database_connection_string="postgresql://unused"),
         observability=ObservabilityConfig(),
         guardrails=GuardrailConfig(
-            watermark_overlap=timedelta(minutes=30), mass_delete_min_pages=1, load_batch_pages=2
+            load_date_overlap=timedelta(minutes=30), mass_delete_min_pages=1, load_batch_pages=2
         ),
     )
 
@@ -146,7 +146,7 @@ class FakeStore:
     """Mirrors PgVectorStore's behaviour closely enough to exercise the stages."""
 
     def __init__(self) -> None:
-        self.watermark: datetime | None = None
+        self.load_date: datetime | None = None
         self.pages: dict[str, dict[str, Any]] = {}
         self.chunks: dict[str, dict[str, Any]] = {}  # chunk_id -> row
         self.failures: dict[str, dict[str, Any]] = {}
@@ -156,12 +156,12 @@ class FakeStore:
     def check_schema(self, dimensions: int) -> None:
         assert dimensions == DIMENSIONS
 
-    def get_watermark(self, pipeline: str) -> datetime | None:
-        return self.watermark
+    def get_load_date(self, pipeline: str) -> datetime | None:
+        return self.load_date
 
-    def advance_watermark(self, pipeline: str, watermark: datetime, run_id: str) -> datetime:
-        self.watermark = max(filter(None, [self.watermark, watermark]))
-        return self.watermark
+    def advance_load_date(self, pipeline: str, load_date: datetime, run_id: str) -> datetime:
+        self.load_date = max(filter(None, [self.load_date, load_date]))
+        return self.load_date
 
     def get_indexed_pages(self, page_ids: Sequence[str]) -> dict[str, IndexedPage]:
         return {

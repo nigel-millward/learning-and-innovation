@@ -12,10 +12,10 @@ extract -> transform -> load -> commit_watermark --> publish_run_status
 
 | Task | What it does |
 |---|---|
-| `extract` | CQL search `lastmodified >= watermark - overlap`; skips versions already indexed; adds dead-lettered pages due a retry; lands each raw page in S3 (`raw/space=/page_id=/version=.json`). |
+| `extract` | CQL search `lastmodified >= load_date - overlap`; skips versions already indexed; adds dead-lettered pages due a retry; lands each raw page in S3 (`raw/space=/page_id=/version=.json`). |
 | `transform` | Converts storage-format XHTML to clean Markdown-ish text (drops TOC/page-tree/child/include macros, media, macro params, ADF fallbacks, boilerplate, repeated blocks) and chunks it with `RecursiveCharacterTextSplitter` (800 tokens, 120 overlap = 15%, heading-aware). Stages `documents.jsonl` in S3. |
 | `load` | Hashes each chunk (`sha256` of contextual header + text), reuses any existing vector with that hash and embedding version, embeds the rest, and replaces the page's rows in one transaction. Emits the `confluence_index` Airflow asset. |
-| `commit_watermark` | Advances the watermark (forward-only) to the extract start time, only after a successful load. |
+| `commit_watermark` | Advances the load_date (forward-only) to the extract start time, only after a successful load. |
 | `reconcile` | Compares every live page ID with the index and removes vectors for deleted or no-longer-visible pages. A mass-deletion guard stops a permissions fault from emptying the index. |
 | `publish_run_status` | Always runs. Publishes CloudWatch metrics, writes a `pipeline_runs` audit row, sends an SNS warning on degraded success, and fails the DAG run if any stage failed. Task failures send their own SNS alert with the exception. |
 
@@ -23,8 +23,12 @@ extract -> transform -> load -> commit_watermark --> publish_run_status
 
 ```
 src/confluence_indexer/
-├── dags/confluence_indexing.py   Airflow 3 DAG: schedule, retries, params, alerts, asset
-├── tasks.py                      Body of each Airflow task: builds real clients, runs a stage
+├── confluence_indexing_dag.py    Daily DAG: schedule, retries, params, task order, asset
+├── confluence_indexing_maintenance_dag.py   Manual DAG: schema migrations
+├── .airflowignore                Only *_dag.py files are parsed as DAGs
+├── orchestration/                Runs the stages under Airflow
+│   ├── airflow_runtime.py        Airflow plumbing for the DAGs: config, run context, XCom keys, alerts
+│   └── tasks.py                  One run_* per task: builds real clients, runs it (no Airflow)
 ├── stages/                       One module per stage; pure orchestration logic, no Airflow
 │   ├── base.py                   StageReport, failure budget, dead-lettering
 │   ├── extract.py  transform.py  load.py  reconcile.py  watermark.py  summary.py
@@ -39,9 +43,13 @@ src/confluence_indexer/
 ├── sql/
 │   ├── queries/*.sql             Every statement the store runs (named parameters)
 │   └── migrations/*.sql          Schema DDL, applied in order
-├── config.py  models.py  cli.py
+├── config.py  models.py          Shared config and models
+scripts/run_pipeline_locally.py   Developer tool: runs the task functions in DAG order, no Airflow
 deployment/                       docker-compose (pgvector + LocalStack)
 tests/
+├── conftest.py                   Shared fakes and fixtures
+├── unit/                         No external services; Confluence, S3 (moto) and the store are faked
+└── integration/                  Needs a live PostgreSQL with pgvector
 ```
 
 `integrations/` holds code that does I/O and `processing/` holds pure functions.
@@ -53,7 +61,7 @@ That tells you what to fake in a test, and avoids a catch-all `libs/`.
 |---|---|
 | `chunks` | `chunk_id` (`{page_id}:{index}`), `page_id`, `content`, `embedding_text`, `content_hash`, `embedding_version`, `embedding vector(N)`, `metadata` jsonb. This is the page/chunk/hash/embedding-version mapping. HNSW cosine index. |
 | `pages` | Source registry: version, last modified, labels, ancestors, page content hash, raw S3 URI. Soft-deleted on removal. |
-| `pipeline_state` | The watermark. |
+| `pipeline_state` | The load_date. |
 | `failed_pages` | Dead letters: retried each run until `MAX_PAGE_ATTEMPTS`, then parked (and counted in CloudWatch). |
 | `pipeline_runs` | One audit row per DAG run. |
 
@@ -77,37 +85,49 @@ ollama pull nomic-embed-text         # 768-dimension embeddings, no API key
 docker compose -f deployment/docker-compose.yml up -d   # pgvector + LocalStack
 cp .env.example .env                 # then fill in the CONFLUENCE_* values
 set -a && source .env && set +a
-
-confluence-indexer migrate           # creates the schema with vector(768)
 ```
 
-**With Airflow 3** (the real orchestrator):
+**While developing, without Airflow:** `scripts/run_pipeline_locally.py` calls the
+same `run_*` task functions as the DAG, in DAG order. It is a developer tool, not
+deployed and not a test. Breakpoints work in a normal debugger.
+
+```bash
+python scripts/run_pipeline_locally.py                  # migrate, then one incremental run
+python scripts/run_pipeline_locally.py --full-refresh   # re-read every page
+python scripts/run_pipeline_locally.py --replay s3://confluence-indexing-landing/confluence-indexing/runs/run_id=<id>/extract_manifest.json
+python scripts/run_pipeline_locally.py --help           # --skip-migrate, --allow-mass-delete, --log-level
+```
+
+**Before deploying, with Airflow** (exercises XComs, params and task order too):
 
 ```bash
 export AIRFLOW_HOME=$PWD/airflow-home
-export AIRFLOW__CORE__DAGS_FOLDER=$PWD/src/confluence_indexer/dags
+export AIRFLOW__CORE__DAGS_FOLDER=$PWD/src/confluence_indexer
 export AIRFLOW__CORE__LOAD_EXAMPLES=False
-airflow standalone                   # UI on http://localhost:8080; trigger confluence_indexing
+airflow db migrate                   # one-off: local SQLite metadata database
+
+airflow dags test confluence_indexing_maintenance   # creates the schema with vector(768)
+airflow dags test confluence_indexing               # one run, in-process, no scheduler
+airflow standalone                   # or the full UI on http://localhost:8080
 ```
 
-**Without Airflow**, the CLI runs the same task functions in-process:
-
-```bash
-confluence-indexer run               # one incremental run
-confluence-indexer run --full-refresh
-confluence-indexer replay s3://confluence-indexing-landing/confluence-indexing/runs/run_id=<id>/extract_manifest.json
-```
+On MWAA, copy the `src/confluence_indexer/` folder (including `.airflowignore`)
+into the environment's S3 `dags/` folder, then trigger `confluence_indexing_maintenance`
+once to create the schema before the first daily run.
 
 ## Tests
 
 ```bash
-pytest                                # unit tests; Confluence, S3 (moto) and the store are faked
-ruff check . && ruff format --check . && mypy src
-PGVECTOR_TEST_DSN=postgresql://indexer:indexer@localhost:5433/postgres pytest -m integration
+pytest tests/unit                     # unit tests; Confluence, S3 (moto) and the store are faked
+ruff check . && ruff format --check . && mypy src scripts
+PGVECTOR_TEST_DSN=postgresql://indexer:indexer@localhost:5433/postgres pytest tests/integration
 ```
 
-`tests/test_dag.py` parses the DAG with a real Airflow 3 `DagBag`. It is
-skipped when Airflow is not installed.
+`pytest` with no arguments runs both folders; the integration tests skip when
+`PGVECTOR_TEST_DSN` is not set.
+
+`tests/unit/test_dag.py` parses both DAGs with a real Airflow 3 `DagBag`, scanning
+the package the way Airflow does. It is skipped when Airflow is not installed.
 
 ## Configuration
 
@@ -131,8 +151,8 @@ AWS Secrets Manager. `PG_DSN_SECRET_ID` also accepts an RDS-managed secret.
 | A page keeps failing | `SELECT * FROM confluence_index.failed_pages;` shows the error. Fix it and the next run retries automatically. To retry a parked page, `UPDATE ... SET attempts = 0`. |
 | `DeletionGuardError` | Reconcile would delete more than `MAX_DELETE_RATIO` of the index. Check the service account's space permissions. If the deletions are real, trigger with `allow_mass_delete=true`. |
 | Cleaning or chunking rules changed | Trigger with `full_refresh=true`. Only chunks whose text changed are re-embedded. |
-| Re-process a past run without calling Confluence | `confluence-indexer replay <extract_manifest.json URI>`. |
-| Changing embedding model or dimensions | The vector column size is fixed at migrate time. For a new dimension, create a fresh schema (or database), set `EMBEDDING_*`, run `migrate`, then `full_refresh=true`. For the same dimension, bump `EMBEDDING_REVISION` and `full_refresh`. |
+| Re-process a past run without calling Confluence | In the Airflow UI, open that `confluence_indexing` run, select `transform` and `load` and **Clear** them with "Downstream" unticked. They re-read that run's extract manifest from XCom, so this only works while the run's XComs still exist (`airflow db clean` removes them). |
+| Changing embedding model or dimensions | The vector column size is fixed at migrate time. For a new dimension, create a fresh schema (or database), set `EMBEDDING_*`, trigger `confluence_indexing_maintenance`, then `full_refresh=true`. For the same dimension, bump `EMBEDDING_REVISION` and `full_refresh`. |
 
 Suggested CloudWatch alarms on namespace `ConfluenceIndexing`:
 `RunSucceeded` < 1 over 26 hours, treating missing data as breaching (this catches a
@@ -150,5 +170,5 @@ scheduler that stopped running); `DeadLetterParkedPages` > 0; `LoadPagesFailed` 
   Within a changed page, a chunk is re-embedded only if its hash is new anywhere in
   the index, so moved and duplicated text reuses existing vectors.
 - **Failure policy:** a bad page is dead-lettered and does not block the
-  watermark. A stage fails, and Airflow retries it, only when more than
+  load_date. A stage fails, and Airflow retries it, only when more than
   `MAX_FAILURE_RATIO` of its pages fail. Retries are idempotent.

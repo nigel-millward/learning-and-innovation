@@ -94,9 +94,9 @@ def test_schema_dimension_check(store: PgVectorStore) -> None:
 
 
 def test_watermark_only_moves_forward(store: PgVectorStore) -> None:
-    assert store.get_watermark("p") is None
-    store.advance_watermark("p", T0 + timedelta(days=1), "r1")
-    assert store.advance_watermark("p", T0, "r2") == T0 + timedelta(days=1)
+    assert store.get_load_date("p") is None
+    store.advance_load_date("p", T0 + timedelta(days=1), "r1")
+    assert store.advance_load_date("p", T0, "r2") == T0 + timedelta(days=1)
 
 
 def test_upsert_replace_and_reuse(store: PgVectorStore) -> None:

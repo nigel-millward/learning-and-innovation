@@ -1,0 +1,4 @@
+# AIRFLOW__CORE__DAGS_FOLDER points at this package, so Airflow would otherwise try
+# to import every module here as a DAG file. Only *_dag.py files are DAGs.
+*
+!*_dag.py

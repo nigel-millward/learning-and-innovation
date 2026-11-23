@@ -19,7 +19,9 @@ services:
       retries: 10
 
   localstack:
-    image: localstack/localstack:4.0
+    # 4.9 understands the CBOR request format that current boto3 uses for CloudWatch
+    # (4.0 rejects it). Later calendar-versioned images need LOCALSTACK_AUTH_TOKEN.
+    image: localstack/localstack:4.9.0
     environment:
       SERVICES: s3,sns,cloudwatch,secretsmanager
       AWS_DEFAULT_REGION: eu-west-2

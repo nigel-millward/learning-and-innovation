@@ -1,8 +1,7 @@
 """Task entry points: wire each pipeline stage to real clients.
 
-Each ``run_*`` function is the body of one Airflow task in
-``dags/confluence_indexing.py``; the CLI calls the same functions, so a stage
-behaves identically on an Airflow worker and on a laptop. Each call builds its own clients and
+Each ``run_*`` function is the body of one Airflow task in ``confluence_indexing_dag.py``
+or ``confluence_indexing_maintenance_dag.py``. Each call builds its own clients and
 connection: Airflow tasks may land on different workers, so nothing is shared
 between stages except what is persisted in S3 and PostgreSQL.
 """
@@ -16,15 +15,15 @@ from typing import Any
 
 import boto3
 
-from .config import PipelineConfig
-from .integrations.confluence import ConfluenceClient
-from .integrations.embeddings import build_embedding_provider
-from .integrations.landing_zone import LandingZone
-from .integrations.observability import Alerter, MetricsPublisher
-from .integrations.vector_store import PgVectorStore
-from .processing.chunking import Chunker
-from .processing.cleaning import StorageFormatCleaner
-from .stages import (
+from ..config import PipelineConfig
+from ..integrations.confluence import ConfluenceClient
+from ..integrations.embeddings import build_embedding_provider
+from ..integrations.landing_zone import LandingZone
+from ..integrations.observability import Alerter, MetricsPublisher
+from ..integrations.vector_store import PgVectorStore, apply_migrations
+from ..processing.chunking import Chunker
+from ..processing.cleaning import StorageFormatCleaner
+from ..stages import (
     RunSummary,
     StageReport,
     commit_watermark,
@@ -55,7 +54,7 @@ def run_extract(
 ) -> dict[str, Any]:
     with (
         ConfluenceClient(config.confluence) as confluence,
-        PgVectorStore.connect(config.database.dsn) as store,
+        PgVectorStore.connect(config.database.database_connection_string) as store,
     ):
         report = extract(
             config,
@@ -69,7 +68,7 @@ def run_extract(
 
 
 def run_transform(config: PipelineConfig, run_id: str, manifest_uri: str) -> dict[str, Any]:
-    with PgVectorStore.connect(config.database.dsn) as store:
+    with PgVectorStore.connect(config.database.database_connection_string) as store:
         report = transform(
             config,
             landing=_landing(config),
@@ -83,7 +82,7 @@ def run_transform(config: PipelineConfig, run_id: str, manifest_uri: str) -> dic
 
 
 def run_load(config: PipelineConfig, run_id: str, documents_uri: str) -> dict[str, Any]:
-    with PgVectorStore.connect(config.database.dsn) as store:
+    with PgVectorStore.connect(config.database.database_connection_string) as store:
         report = load(
             config,
             landing=_landing(config),
@@ -100,7 +99,7 @@ def run_reconcile(
 ) -> dict[str, Any]:
     with (
         ConfluenceClient(config.confluence) as confluence,
-        PgVectorStore.connect(config.database.dsn) as store,
+        PgVectorStore.connect(config.database.database_connection_string) as store,
     ):
         report = reconcile(
             config,
@@ -115,7 +114,7 @@ def run_reconcile(
 def run_commit_watermark(
     config: PipelineConfig, run_id: str, run_started_at: str
 ) -> dict[str, Any]:
-    with PgVectorStore.connect(config.database.dsn) as store:
+    with PgVectorStore.connect(config.database.database_connection_string) as store:
         report = commit_watermark(
             config,
             store=store,
@@ -135,7 +134,7 @@ def run_summary(
         config.environment,
     )
     try:
-        with PgVectorStore.connect(config.database.dsn) as store:
+        with PgVectorStore.connect(config.database.database_connection_string) as store:
             return summarise(
                 config,
                 reports,
@@ -161,27 +160,10 @@ def alerter(config: PipelineConfig) -> Alerter:
     )
 
 
-def run_all(
-    config: PipelineConfig,
-    run_id: str,
-    *,
-    full_refresh: bool = False,
-    allow_mass_delete: bool = False,
-) -> RunSummary:
-    """Run every stage in-process, in DAG order. For local runs and backfills."""
-    reports: dict[str, dict[str, Any] | None] = {}
-    try:
-        extracted = reports["extract"] = run_extract(config, run_id, full_refresh=full_refresh)
-        started = extracted["outputs"]["run_started_at"]
-        transformed = reports["transform"] = run_transform(
-            config, run_id, extracted["outputs"]["manifest_uri"]
-        )
-        reports["load"] = run_load(config, run_id, transformed["outputs"]["documents_uri"])
-        reports["commit_watermark"] = run_commit_watermark(config, run_id, started)
-        reports["reconcile"] = run_reconcile(
-            config, run_id, started, allow_mass_delete=allow_mass_delete
-        )
-    except Exception as exc:
-        log.exception("Run %s failed", run_id)
-        alerter(config).send("CRITICAL", "Run failed", {"run_id": run_id, "error": repr(exc)})
-    return run_summary(config, run_id, reports)
+def run_migrate(config: PipelineConfig) -> dict[str, Any]:
+    """Apply pending schema migrations. Safe to repeat: applied files are skipped."""
+    applied = apply_migrations(
+        config.database.database_connection_string, config.embedding.dimensions
+    )
+    log.info("Migrations applied: %s", applied or "none pending")
+    return {"applied": applied}

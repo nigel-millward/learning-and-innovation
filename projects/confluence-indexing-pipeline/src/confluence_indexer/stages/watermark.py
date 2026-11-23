@@ -1,4 +1,4 @@
-"""Commit watermark: advance the incremental-extraction high-water mark."""
+"""Commit load_date: advance the incremental-extraction load timestamp."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ log = logging.getLogger(__name__)
 def commit_watermark(
     config: PipelineConfig, *, store: PgVectorStore, run_id: str, run_started_at: datetime
 ) -> StageReport:
-    """Advance the watermark. Only reached when extract, transform and load succeeded."""
+    """Advance the load_date. Only reached when extract, transform and load succeeded."""
     report = StageReport("commit_watermark")
-    stored = store.advance_watermark(config.pipeline_name, run_started_at, run_id)
-    report.outputs = {"watermark": stored.isoformat()}
-    log.info("Watermark is now %s", stored.isoformat())
+    stored = store.advance_load_date(config.pipeline_name, run_started_at, run_id)
+    report.outputs = {"load_date": stored.isoformat()}
+    log.info("Load date is now %s", stored.isoformat())
     return report

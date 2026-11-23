@@ -38,9 +38,9 @@ def test_incremental_search_builds_cql_and_follows_cursor_pagination():
 
     c, _ = client(handler, tz="Europe/London")
     since = datetime(2026, 7, 1, 8, 30, 59, tzinfo=UTC)
-    hits = list(c.changed_pages(since))
+    changed_pages = list(c.changed_pages(since))
 
-    assert hits == [PageHit("1", 4), PageHit("2", 1)]
+    assert changed_pages == [PageHit("1", 4), PageHit("2", 1)]
     first, second = seen
     assert first.url.path == "/wiki/rest/api/content/search"
     # BST: 08:30 UTC is 09:30 local, truncated to the minute.

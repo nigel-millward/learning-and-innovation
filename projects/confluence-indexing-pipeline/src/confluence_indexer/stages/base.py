@@ -1,7 +1,7 @@
 """Shared stage plumbing: reports, errors and the per-page failure policy.
 
 Every stage takes its collaborators explicitly and returns a ``StageReport``,
-so stages run the same under Airflow, the CLI and tests (with fakes). Stages
+so stages run the same under Airflow and in tests (with fakes). Stages
 are idempotent: re-running one (an Airflow retry, a manual clear, a replay)
 converges on the same index state without duplicate rows and without paying
 to re-embed text that already has a vector.

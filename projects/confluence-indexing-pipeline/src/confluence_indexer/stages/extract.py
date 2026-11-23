@@ -27,38 +27,38 @@ def extract(
     full_refresh: bool = False,
     now: datetime | None = None,
 ) -> StageReport:
-    """Find pages changed since the watermark and land their raw payloads in S3."""
+    """Find pages changed since the load_date and land their raw payloads in S3."""
     started = time.monotonic()
     report = StageReport("extract")
     # Captured before searching: anything modified from here on is picked up next run.
     run_started_at = now or datetime.now(UTC)
     embedding_version = config.embedding.embedding_version
 
-    watermark = None if full_refresh else store.get_watermark(config.pipeline_name)
-    since = watermark - config.guardrails.watermark_overlap if watermark else None
+    load_date = None if full_refresh else store.get_load_date(config.pipeline_name)
+    since = load_date - config.guardrails.load_date_overlap if load_date else None
     log.info("Extracting pages modified since %s (full_refresh=%s)", since, full_refresh)
 
-    hits = {hit.page_id: hit.version for hit in confluence.changed_pages(since)}
-    indexed = store.get_indexed_pages(list(hits))
-    to_fetch = [
+    changed_pages = {page.page_id: page.version for page in confluence.changed_pages(since)}
+    indexed = store.get_indexed_pages(list(changed_pages))
+    page_ids_to_fetch = [
         page_id
-        for page_id, version in sorted(hits.items())
+        for page_id, version in sorted(changed_pages.items())
         if full_refresh or _needs_fetch(indexed.get(page_id), version, embedding_version)
     ]
-    fetching = set(to_fetch)
+    fetching = set(page_ids_to_fetch)
     retries = [
         page_id
         for page_id in store.retryable_failures(config.guardrails.max_page_attempts)
         if page_id not in fetching
     ]
     report.counts.update(
-        pages_changed=len(hits),
-        pages_already_indexed=len(hits) - len(to_fetch),
+        pages_changed=len(changed_pages),
+        pages_already_indexed=len(changed_pages) - len(page_ids_to_fetch),
         pages_retried=len(retries),
     )
 
     pages: list[dict[str, Any]] = []
-    for page_id in [*to_fetch, *retries]:
+    for page_id in [*page_ids_to_fetch, *retries]:
         try:
             payload = confluence.get_page(page_id)
             if payload is None:
@@ -87,7 +87,7 @@ def extract(
         },
     )
     report.outputs = {"manifest_uri": manifest_uri, "run_started_at": run_started_at.isoformat()}
-    enforce_failure_budget(config, report, attempted=len(to_fetch) + len(retries))
+    enforce_failure_budget(config, report, attempted=len(page_ids_to_fetch) + len(retries))
     report.seconds = time.monotonic() - started
     return report
 

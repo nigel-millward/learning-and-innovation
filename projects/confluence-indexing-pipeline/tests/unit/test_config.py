@@ -26,7 +26,7 @@ def test_defaults_from_minimal_env():
     # Local-first: Ollama needs no key, so OPENAI_API_KEY above is simply unused.
     assert config.embedding.embedding_version == "ollama:nomic-embed-text:768:r1"
     assert config.embedding.ollama_base_url == "http://localhost:11434"
-    assert config.database.dsn == "postgresql://u:p@h/db"
+    assert config.database.database_connection_string == "postgresql://u:p@h/db"
 
 
 def test_secrets_are_not_in_repr():
@@ -91,6 +91,6 @@ def test_secrets_manager_references_including_rds_secret_json():
         )
 
     assert config.confluence.api_token == "from-sm"
-    assert config.database.dsn == (
+    assert config.database.database_connection_string == (
         "postgresql://indexer:p%40ss%2Fword@db.internal:5432/rag?sslmode=verify-full"
     )

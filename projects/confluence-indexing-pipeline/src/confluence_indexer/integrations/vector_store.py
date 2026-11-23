@@ -1,4 +1,4 @@
-"""PostgreSQL + pgvector persistence: chunks, page registry, watermark, dead letters.
+"""PostgreSQL + pgvector persistence: chunks, page registry, load_date, dead letters.
 
 All statements are in ``confluence_indexer/sql``; this module only binds
 parameters, manages transactions and shapes results.
@@ -43,9 +43,12 @@ class PgVectorStore:
 
     @classmethod
     @contextmanager
-    def connect(cls, dsn: str) -> Iterator[PgVectorStore]:
+    def connect(cls, database_connection_string: str) -> Iterator[PgVectorStore]:
         with psycopg.connect(
-            dsn, autocommit=True, row_factory=dict_row, application_name="confluence-indexer"
+            database_connection_string,
+            autocommit=True,
+            row_factory=dict_row,
+            application_name="confluence-indexer",
         ) as conn:
             register_vector(conn)
             yield cls(conn)
@@ -61,18 +64,18 @@ class PgVectorStore:
                 f"chunks.embedding is {found}, but EMBEDDING_DIMENSIONS needs {expected}"
             )
 
-    # -- watermark ---------------------------------------------------------
+    # -- load_date ---------------------------------------------------------
 
-    def get_watermark(self, pipeline: str) -> datetime | None:
+    def get_load_date(self, pipeline: str) -> datetime | None:
         row = self._one("get_watermark", pipeline_name=pipeline)
-        return row["watermark"] if row else None
+        return row["load_date"] if row else None
 
-    def advance_watermark(self, pipeline: str, watermark: datetime, run_id: str) -> datetime:
+    def advance_load_date(self, pipeline: str, load_date: datetime, run_id: str) -> datetime:
         row = self._one(
-            "advance_watermark", pipeline_name=pipeline, watermark=watermark, run_id=run_id
+            "advance_watermark", pipeline_name=pipeline, load_date=load_date, run_id=run_id
         )
         assert row is not None
-        stored: datetime = row["watermark"]
+        stored: datetime = row["load_date"]
         return stored
 
     # -- page state --------------------------------------------------------
@@ -258,14 +261,14 @@ def chunk_metadata(document: PageDocument, chunk_index: int) -> dict[str, Any]:
     }
 
 
-def apply_migrations(dsn: str, embedding_dimensions: int) -> list[str]:
+def apply_migrations(database_connection_string: str, embedding_dimensions: int) -> list[str]:
     """Apply pending migrations once each, in order. Returns the files applied.
 
     ``:embedding_dimensions`` in a migration is replaced with the configured
     vector size, the same variable ``psql -v embedding_dimensions=N`` would set.
     """
     applied: list[str] = []
-    with psycopg.connect(dsn, autocommit=True) as conn:
+    with psycopg.connect(database_connection_string, autocommit=True) as conn:
         conn.execute(query("migrations_create_table"))
         conn.execute(query("migrations_lock"))
         try:

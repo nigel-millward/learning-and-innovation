@@ -21,7 +21,13 @@ from confluence_indexer.stages import (
     transform,
 )
 
-from .conftest import FakeConfluence, FakeEmbedder, FakeStore, page_payload, with_embedding_revision
+from ..conftest import (
+    FakeConfluence,
+    FakeEmbedder,
+    FakeStore,
+    page_payload,
+    with_embedding_revision,
+)
 
 DAY_1 = datetime(2026, 11, 2, 2, 0, tzinfo=UTC)
 DAY_2 = DAY_1 + timedelta(days=1)
@@ -106,7 +112,7 @@ def test_first_run_indexes_everything_and_sets_watermark(env, confluence, store,
 
     assert confluence.searches == [None]
     assert reports["load"].counts["pages_indexed"] == 2
-    assert store.watermark == DAY_1
+    assert store.load_date == DAY_1
     chunks = store.page_chunks("100")
     assert len(chunks) > 1
     assert len(embedder.embedded_texts) == len({c["content_hash"] for c in store.chunks.values()})
@@ -125,7 +131,7 @@ def test_incremental_run_uses_watermark_with_overlap_and_skips_unchanged(
 
     reports = env(DAY_2)
 
-    assert confluence.searches[-1] == DAY_1 - config.guardrails.watermark_overlap
+    assert confluence.searches[-1] == DAY_1 - config.guardrails.load_date_overlap
     # Page 100 is returned again by the overlap, but that version is already indexed.
     assert reports["extract"].counts["pages_changed"] == 1
     assert reports["extract"].counts["pages_already_indexed"] == 1
@@ -235,7 +241,7 @@ def test_failed_fetch_is_dead_lettered_and_retried_next_run(env, config, conflue
 
     assert reports["extract"].counts["pages_failed"] == 1
     assert store.failures["7"]["stage"] == "extract"
-    assert store.watermark == DAY_1  # one bad page does not hold back everyone else
+    assert store.load_date == DAY_1  # one bad page does not hold back everyone else
 
     confluence.broken.clear()
     confluence.fetches.clear()
@@ -332,7 +338,7 @@ def test_reconcile_then_reappearing_page_is_reindexed(env, config, confluence, s
 def test_watermark_never_moves_backwards(config, store):
     commit_watermark(config, store=store, run_id="b", run_started_at=DAY_2)
     commit_watermark(config, store=store, run_id="a", run_started_at=DAY_1)
-    assert store.watermark == DAY_2
+    assert store.load_date == DAY_2
 
 
 def test_summary_marks_missing_stages_as_failed(config, store):

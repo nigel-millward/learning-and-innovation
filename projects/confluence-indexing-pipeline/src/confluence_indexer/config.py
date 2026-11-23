@@ -1,8 +1,8 @@
 """Pipeline configuration.
 
 All settings come from environment variables so the same code runs unchanged
-under MWAA (env set by the startup script), self-managed Airflow, and the local
-CLI. Secret values may be given directly (``CONFLUENCE_API_TOKEN``) or as an
+under MWAA (env set by the startup script), self-managed Airflow, and local
+`airflow standalone`. Secret values may be given directly (``CONFLUENCE_API_TOKEN``) or as an
 AWS Secrets Manager reference (``CONFLUENCE_API_TOKEN_SECRET_ID``); the
 reference form is the one to use anywhere other than a developer laptop.
 """
@@ -110,7 +110,7 @@ class EmbeddingConfig:
 
 @dataclass(frozen=True)
 class DatabaseConfig:
-    dsn: str = field(repr=False)
+    database_connection_string: str = field(repr=False)
 
 
 @dataclass(frozen=True)
@@ -122,9 +122,9 @@ class ObservabilityConfig:
 
 @dataclass(frozen=True)
 class GuardrailConfig:
-    # Re-read this far behind the stored watermark: CQL dates have minute
+    # Re-read this far behind the stored load_date: CQL dates have minute
     # precision and the Confluence search index is eventually consistent.
-    watermark_overlap: timedelta = timedelta(minutes=30)
+    load_date_overlap: timedelta = timedelta(minutes=30)
     # A stage fails (and Airflow retries it) when more than this fraction of
     # its pages fail. Below it, failures are dead-lettered and retried next run.
     max_failure_ratio: float = 0.1
@@ -196,14 +196,16 @@ class PipelineConfig:
                 azure_api_version=e.get("AZURE_OPENAI_API_VERSION", "2024-10-21"),
                 aws_region=e.get("BEDROCK_REGION") or region,
             ),
-            database=DatabaseConfig(dsn=_database_dsn(e, region)),
+            database=DatabaseConfig(
+                database_connection_string=_database_connection_string(e, region)
+            ),
             observability=ObservabilityConfig(
                 metrics_namespace=e.get("METRICS_NAMESPACE", "ConfluenceIndexing"),
                 alert_topic_arn=e.get("ALERT_TOPIC_ARN") or None,
                 notify_on_success=e.bool_("NOTIFY_ON_SUCCESS", False),
             ),
             guardrails=GuardrailConfig(
-                watermark_overlap=timedelta(minutes=e.int_("WATERMARK_OVERLAP_MINUTES", 30)),
+                load_date_overlap=timedelta(minutes=e.int_("WATERMARK_OVERLAP_MINUTES", 30)),
                 max_failure_ratio=e.float_("MAX_FAILURE_RATIO", 0.1),
                 max_page_attempts=e.int_("MAX_PAGE_ATTEMPTS", 5),
                 max_delete_ratio=e.float_("MAX_DELETE_RATIO", 0.2),
@@ -221,11 +223,11 @@ def _embedding_api_key(e: _Env, provider: str, region: str | None) -> str | None
     return None  # Ollama needs no key; Bedrock uses the task's IAM role
 
 
-def _database_dsn(e: _Env, region: str | None) -> str:
-    """Resolve the PostgreSQL DSN.
+def _database_connection_string(e: _Env, region: str | None) -> str:
+    """Resolve the PostgreSQL connection string.
 
     ``PG_DSN_SECRET_ID`` may point at an RDS-managed secret (JSON with
-    username/password/host/port/dbname) or at a plain DSN string.
+    username/password/host/port/dbname) or at a plain connection string.
     """
     raw = e.secret("PG_DSN", region, required=True)
     try:
@@ -233,7 +235,7 @@ def _database_dsn(e: _Env, region: str | None) -> str:
     except json.JSONDecodeError:
         return raw
     if not isinstance(parsed, dict):
-        raise ConfigError("PG_DSN secret must be a DSN string or an RDS secret JSON object")
+        raise ConfigError("PG_DSN secret must be a connection string or an RDS secret JSON object")
     sslmode = e.get("PG_SSLMODE", "verify-full")
     return (
         f"postgresql://{quote(parsed['username'], safe='')}:{quote(parsed['password'], safe='')}"

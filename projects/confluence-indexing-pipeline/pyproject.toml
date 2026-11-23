@@ -24,7 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # The orchestrator. Deployed environments (e.g. MWAA) provide it; install it
-# locally to run `airflow standalone` against src/confluence_indexer/dags.
+# locally to run `airflow standalone` against src/confluence_indexer.
 airflow = ["apache-airflow>=3.1,<4"]
 dev = [
     "moto[s3,sns,cloudwatch,secretsmanager]>=5",
@@ -33,14 +33,11 @@ dev = [
     "ruff>=0.5",
 ]
 
-[project.scripts]
-confluence-indexer = "confluence_indexer.cli:main"
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-confluence_indexer = ["sql/queries/*.sql", "sql/migrations/*.sql"]
+confluence_indexer = ["sql/queries/*.sql", "sql/migrations/*.sql", ".airflowignore"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,7 +1,7 @@
 """Pipeline stages, one module each, in DAG order.
 
-Pure functions of their inputs and collaborators; no Airflow imports. The DAG
-(``confluence_indexer.dags``) and the CLI reach them through ``tasks``.
+Pure functions of their inputs and collaborators; no Airflow imports. The DAGs
+(``confluence_indexer/*_dag.py``) reach them through ``orchestration.tasks``.
 """
 
 from .base import STAGES, DeletionGuardError, StageFailedError, StageReport
