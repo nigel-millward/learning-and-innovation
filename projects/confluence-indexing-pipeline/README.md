@@ -6,12 +6,13 @@ Only pages changed since the last successful run are fetched, and only chunks
 whose text actually changed are re-embedded.
 
 ```
-extract -> transform -> load -> commit_watermark --> publish_run_status
-                             \-> reconcile -------/
+schema_management -> extract -> transform -> load -> commit_watermark --> publish_run_status
+                                                  \-> reconcile -------/
 ```
 
 | Task | What it does |
 |---|---|
+| `schema_management` | Runs `sql/schema_management/*.sql` in order: creates the schema, tables and indexes if they don't exist. Every statement is rerunnable, so existing objects and data are kept. A new schema change must be written the same way (`IF NOT EXISTS`, or guarded in a `DO` block). |
 | `extract` | CQL search `lastmodified >= load_date - overlap`; skips versions already indexed; adds dead-lettered pages due a retry; lands each raw page in S3 (`raw/space=/page_id=/version=.json`). |
 | `transform` | Converts storage-format XHTML to clean Markdown-ish text (drops TOC/page-tree/child/include macros, media, macro params, ADF fallbacks, boilerplate, repeated blocks) and chunks it with `RecursiveCharacterTextSplitter` (800 tokens, 120 overlap = 15%, heading-aware). Stages `documents.jsonl` in S3. |
 | `load` | Hashes each chunk (`sha256` of contextual header + text), reuses any existing vector with that hash and embedding version, embeds the rest, and replaces the page's rows in one transaction. Emits the `confluence_index` Airflow asset. |
@@ -24,7 +25,6 @@ extract -> transform -> load -> commit_watermark --> publish_run_status
 ```
 src/confluence_indexer/
 ├── confluence_indexing_dag.py    Daily DAG: schedule, retries, params, task order, asset
-├── confluence_indexing_maintenance_dag.py   Manual DAG: schema migrations
 ├── .airflowignore                Only *_dag.py files are parsed as DAGs
 ├── orchestration/                Runs the stages under Airflow
 │   ├── airflow_runtime.py        Airflow plumbing for the DAGs: config, run context, XCom keys, alerts
@@ -42,7 +42,7 @@ src/confluence_indexer/
 │   ├── cleaning.py  chunking.py
 ├── sql/
 │   ├── queries/*.sql             Every statement the store runs (named parameters)
-│   └── migrations/*.sql          Schema DDL, applied in order
+│   └── schema_management/*.sql   Rerunnable schema DDL, applied in order on every run
 ├── config.py  models.py          Shared config and models
 scripts/run_pipeline_locally.py   Developer tool: runs the task functions in DAG order, no Airflow
 deployment/                       docker-compose (pgvector + LocalStack)
@@ -92,10 +92,10 @@ same `run_*` task functions as the DAG, in DAG order. It is a developer tool, no
 deployed and not a test. Breakpoints work in a normal debugger.
 
 ```bash
-python scripts/run_pipeline_locally.py                  # migrate, then one incremental run
+python scripts/run_pipeline_locally.py                  # schema management, then one incremental run
 python scripts/run_pipeline_locally.py --full-refresh   # re-read every page
 python scripts/run_pipeline_locally.py --replay s3://confluence-indexing-landing/confluence-indexing/runs/run_id=<id>/extract_manifest.json
-python scripts/run_pipeline_locally.py --help           # --skip-migrate, --allow-mass-delete, --log-level
+python scripts/run_pipeline_locally.py --help           # --skip-schema-management, --allow-mass-delete, --log-level
 ```
 
 **Before deploying, with Airflow** (exercises XComs, params and task order too):
@@ -106,14 +106,14 @@ export AIRFLOW__CORE__DAGS_FOLDER=$PWD/src/confluence_indexer
 export AIRFLOW__CORE__LOAD_EXAMPLES=False
 airflow db migrate                   # one-off: local SQLite metadata database
 
-airflow dags test confluence_indexing_maintenance   # creates the schema with vector(768)
-airflow dags test confluence_indexing               # one run, in-process, no scheduler
+airflow dags test confluence_indexing   # one run, in-process, no scheduler; creates the schema with vector(768) first
 airflow standalone                   # or the full UI on http://localhost:8080
 ```
 
 On MWAA, copy the `src/confluence_indexer/` folder (including `.airflowignore`)
-into the environment's S3 `dags/` folder, then trigger `confluence_indexing_maintenance`
-once to create the schema before the first daily run.
+into the environment's S3 `dags/` folder. The first run creates the schema; the
+database user needs rights to create the schema and the `vector` extension, or a
+DBA can run `sql/schema_management/*.sql` once beforehand.
 
 ## Tests
 
@@ -126,7 +126,7 @@ PGVECTOR_TEST_DSN=postgresql://indexer:indexer@localhost:5433/postgres pytest te
 `pytest` with no arguments runs both folders; the integration tests skip when
 `PGVECTOR_TEST_DSN` is not set.
 
-`tests/unit/test_dag.py` parses both DAGs with a real Airflow 3 `DagBag`, scanning
+`tests/unit/test_dag.py` parses the DAG with a real Airflow 3 `DagBag`, scanning
 the package the way Airflow does. It is skipped when Airflow is not installed.
 
 ## Configuration
@@ -152,7 +152,7 @@ AWS Secrets Manager. `PG_DSN_SECRET_ID` also accepts an RDS-managed secret.
 | `DeletionGuardError` | Reconcile would delete more than `MAX_DELETE_RATIO` of the index. Check the service account's space permissions. If the deletions are real, trigger with `allow_mass_delete=true`. |
 | Cleaning or chunking rules changed | Trigger with `full_refresh=true`. Only chunks whose text changed are re-embedded. |
 | Re-process a past run without calling Confluence | In the Airflow UI, open that `confluence_indexing` run, select `transform` and `load` and **Clear** them with "Downstream" unticked. They re-read that run's extract manifest from XCom, so this only works while the run's XComs still exist (`airflow db clean` removes them). |
-| Changing embedding model or dimensions | The vector column size is fixed at migrate time. For a new dimension, create a fresh schema (or database), set `EMBEDDING_*`, trigger `confluence_indexing_maintenance`, then `full_refresh=true`. For the same dimension, bump `EMBEDDING_REVISION` and `full_refresh`. |
+| Changing embedding model or dimensions | The vector column size is fixed when `schema_management` first creates `chunks`. For a new dimension, create a fresh schema (or database), set `EMBEDDING_*`, then trigger with `full_refresh=true`; the run recreates the schema first. For the same dimension, bump `EMBEDDING_REVISION` and `full_refresh`. |
 
 Suggested CloudWatch alarms on namespace `ConfluenceIndexing`:
 `RunSucceeded` < 1 over 26 hours, treating missing data as breaching (this catches a

@@ -1,7 +1,7 @@
 """Task entry points: wire each pipeline stage to real clients.
 
-Each ``run_*`` function is the body of one Airflow task in ``confluence_indexing_dag.py``
-or ``confluence_indexing_maintenance_dag.py``. Each call builds its own clients and
+Each ``run_*`` function is the body of one Airflow task in ``confluence_indexing_dag.py``.
+Each call builds its own clients and
 connection: Airflow tasks may land on different workers, so nothing is shared
 between stages except what is persisted in S3 and PostgreSQL.
 """
@@ -20,7 +20,7 @@ from ..integrations.confluence import ConfluenceClient
 from ..integrations.embeddings import build_embedding_provider
 from ..integrations.landing_zone import LandingZone
 from ..integrations.observability import Alerter, MetricsPublisher
-from ..integrations.vector_store import PgVectorStore, apply_migrations
+from ..integrations.vector_store import PgVectorStore, apply_schema_management
 from ..processing.chunking import Chunker
 from ..processing.cleaning import StorageFormatCleaner
 from ..stages import (
@@ -160,10 +160,10 @@ def alerter(config: PipelineConfig) -> Alerter:
     )
 
 
-def run_migrate(config: PipelineConfig) -> dict[str, Any]:
-    """Apply pending schema migrations. Safe to repeat: applied files are skipped."""
-    applied = apply_migrations(
+def run_schema_management(config: PipelineConfig) -> dict[str, Any]:
+    """Create any missing schema objects. Safe to repeat: existing objects are kept."""
+    applied = apply_schema_management(
         config.database.database_connection_string, config.embedding.dimensions
     )
-    log.info("Migrations applied: %s", applied or "none pending")
+    log.info("Schema scripts applied: %s", applied)
     return {"applied": applied}

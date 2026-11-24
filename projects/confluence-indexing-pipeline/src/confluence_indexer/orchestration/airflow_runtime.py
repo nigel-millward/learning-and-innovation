@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+# XCom key every stage pushes its full report under; publish_run_status pulls them all.
+REPORT_KEY = "report"
 
 # Airflow Connection field -> pipeline environment variable.
 CONNECTION_ENV: dict[str, dict[str, str]] = {

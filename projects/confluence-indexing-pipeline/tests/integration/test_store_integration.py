@@ -19,7 +19,7 @@ import pytest
 from confluence_indexer.integrations.vector_store import (
     PgVectorStore,
     SchemaMismatchError,
-    apply_migrations,
+    apply_schema_management,
 )
 from confluence_indexer.models import Chunk, PageDocument, PageMetadata
 
@@ -35,18 +35,22 @@ T0 = datetime(2026, 11, 1, tzinfo=UTC)
 
 
 @pytest.fixture
-def dsn() -> Iterator[str]:
+def empty_dsn() -> Iterator[str]:
     assert DSN
     name = f"indexer_test_{uuid.uuid4().hex[:12]}"
     with psycopg.connect(DSN, autocommit=True) as admin:
         admin.execute(f'CREATE DATABASE "{name}"')
-    test_dsn = psycopg.conninfo.make_conninfo(DSN, dbname=name)
     try:
-        apply_migrations(test_dsn, DIMS)
-        yield test_dsn
+        yield psycopg.conninfo.make_conninfo(DSN, dbname=name)
     finally:
         with psycopg.connect(DSN, autocommit=True) as admin:
             admin.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+@pytest.fixture
+def dsn(empty_dsn: str) -> str:
+    apply_schema_management(empty_dsn, DIMS)
+    return empty_dsn
 
 
 @pytest.fixture
@@ -83,8 +87,25 @@ def vectors_for(doc: PageDocument) -> dict[str, list[float]]:
     }
 
 
-def test_migrations_are_idempotent(dsn: str) -> None:
-    assert apply_migrations(dsn, DIMS) == []
+def test_schema_management_reruns_without_losing_data(store: PgVectorStore, dsn: str) -> None:
+    store.advance_load_date("p", T0, "r1")
+    apply_schema_management(dsn, DIMS)
+    assert store.get_load_date("p") == T0
+    store.check_schema(DIMS)
+
+
+def test_schema_management_renames_legacy_watermark_column(empty_dsn: str) -> None:
+    with psycopg.connect(empty_dsn, autocommit=True) as conn:
+        conn.execute("CREATE SCHEMA confluence_index")
+        conn.execute(
+            "CREATE TABLE confluence_index.pipeline_state (pipeline_name text PRIMARY KEY, "
+            "watermark timestamptz NOT NULL, last_run_id text NOT NULL, "
+            "updated_at timestamptz NOT NULL DEFAULT now())"
+        )
+        conn.execute("INSERT INTO confluence_index.pipeline_state VALUES ('p', %s, 'r1')", [T0])
+    apply_schema_management(empty_dsn, DIMS)
+    with PgVectorStore.connect(empty_dsn) as store:
+        assert store.get_load_date("p") == T0
 
 
 def test_schema_dimension_check(store: PgVectorStore) -> None:

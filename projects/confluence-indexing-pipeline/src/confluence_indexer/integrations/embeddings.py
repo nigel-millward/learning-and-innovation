@@ -175,6 +175,6 @@ def _validated(vectors: list[Vector], expected: int, dimensions: int) -> list[Ve
         if len(vector) != dimensions:
             raise EmbeddingError(
                 f"Model returned {len(vector)}-dimension vectors but EMBEDDING_DIMENSIONS is "
-                f"{dimensions}; set it to match the model and migrate the schema"
+                f"{dimensions}; set it to match the model and recreate the chunks table"
             )
     return vectors

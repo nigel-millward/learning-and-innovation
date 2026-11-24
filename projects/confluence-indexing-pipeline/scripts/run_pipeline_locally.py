@@ -6,7 +6,7 @@ the code that runs in production. Not deployed: this file lives outside ``src/``
 Usage, from the project directory, after starting the local stack and loading .env
 (see README, "Run it locally"):
 
-    python scripts/run_pipeline_locally.py                       # migrate, then one incremental run
+    python scripts/run_pipeline_locally.py                       # create schema, then one run
     python scripts/run_pipeline_locally.py --full-refresh        # re-read every page
     python scripts/run_pipeline_locally.py --replay s3://.../extract_manifest.json
                                                                  # transform + load only
@@ -26,8 +26,8 @@ from confluence_indexer.orchestration.tasks import (
     run_commit_watermark,
     run_extract,
     run_load,
-    run_migrate,
     run_reconcile,
+    run_schema_management,
     run_summary,
     run_transform,
 )
@@ -45,7 +45,11 @@ def parse_args() -> argparse.Namespace:
         help="re-run transform and load from a past run's extract_manifest.json, "
         "without calling Confluence",
     )
-    parser.add_argument("--skip-migrate", action="store_true", help="do not apply migrations")
+    parser.add_argument(
+        "--skip-schema-management",
+        action="store_true",
+        help="do not create missing schema objects first",
+    )
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args()
 
@@ -86,8 +90,8 @@ def main() -> int:
     config = PipelineConfig.from_env()
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
-    if not args.skip_migrate:
-        run_migrate(config)
+    if not args.skip_schema_management:
+        run_schema_management(config)
     if args.replay:
         return replay(config, f"local_replay__{stamp}", args.replay)
     return run_pipeline(config, f"local__{stamp}", args)

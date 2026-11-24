@@ -1,9 +1,10 @@
 """SQL lives in ``.sql`` files in this package; Python only loads and executes it.
 
-    queries/     one statement per file, with psycopg named parameters (%(name)s)
-    migrations/  schema DDL, applied in file-name order by ``apply_migrations``
+    queries/            one statement per file, with psycopg named parameters (%(name)s)
+    schema_management/  rerunnable schema DDL, applied in file-name order on every run
+                        by ``apply_schema_management``
 
-Files ship as package data, so an installed wheel can run and migrate itself.
+Files ship as package data, so an installed wheel can create its own schema.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ def query(name: str) -> str:
     return _ROOT.joinpath("queries", f"{name}.sql").read_text(encoding="utf-8")
 
 
-def migrations() -> list[Traversable]:
-    """Migration files, in the order they must be applied."""
-    found = [f for f in _ROOT.joinpath("migrations").iterdir() if f.name.endswith(".sql")]
+def schema_management() -> list[Traversable]:
+    """Schema management scripts, in the order they must be applied."""
+    found = [f for f in _ROOT.joinpath("schema_management").iterdir() if f.name.endswith(".sql")]
     return sorted(found, key=lambda f: f.name)

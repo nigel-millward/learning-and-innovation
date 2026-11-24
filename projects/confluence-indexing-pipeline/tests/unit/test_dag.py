@@ -18,7 +18,7 @@ def _dagbag():
     # checks .airflowignore keeps non-DAG modules out of parsing.
     bag = DagBag(dag_folder=str(DAG_DIR))
     assert bag.import_errors == {}
-    assert set(bag.dags) == {"confluence_indexing", "confluence_indexing_maintenance"}
+    assert set(bag.dags) == {"confluence_indexing"}
     return bag
 
 
@@ -29,7 +29,8 @@ def test_dag_parses_with_expected_shape():
 
     upstream = {t.task_id: {u.task_id for u in t.upstream_list} for t in dag.tasks}
     assert upstream == {
-        "extract": set(),
+        "schema_management": set(),
+        "extract": {"schema_management"},
         "transform": {"extract"},
         "load": {"transform"},
         "commit_watermark": {"extract", "load"},
@@ -40,8 +41,25 @@ def test_dag_parses_with_expected_shape():
     assert {a.name for a in dag.get_task("load").outlets} == {"confluence_index"}
 
 
-def test_maintenance_dag_is_manual_and_only_migrates():
-    dag = _dagbag().dags["confluence_indexing_maintenance"]
-    assert dag.schedule is None
-    assert dag.max_active_runs == 1
-    assert [t.task_id for t in dag.tasks] == ["migrate"]
+def test_reports_round_trip_through_xcom(monkeypatch):
+    from confluence_indexer.orchestration import airflow_runtime
+
+    class FakeTaskInstance:
+        def __init__(self):
+            self.xcom = {}
+            self.task_id = "extract"
+
+        def xcom_push(self, key, value):
+            self.xcom[(self.task_id, key)] = value
+
+        def xcom_pull(self, task_ids, key):
+            return self.xcom.get((task_ids, key))
+
+    ti = FakeTaskInstance()
+    monkeypatch.setattr(airflow_runtime, "get_current_context", lambda: {"ti": ti})
+
+    report = {"status": "success", "outputs": {"manifest_uri": "s3://b/m.json"}}
+    airflow_runtime.push_report(report, "manifest_uri")
+
+    assert airflow_runtime.pull_output("extract", "manifest_uri") == "s3://b/m.json"
+    assert airflow_runtime.pull_reports(("extract", "load")) == {"extract": report, "load": None}

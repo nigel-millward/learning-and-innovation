@@ -4,10 +4,12 @@
 Daily incremental indexing of Confluence pages into PostgreSQL/pgvector.
 
 ```
-extract -> transform -> load -> commit_watermark --> publish_run_status
-                             \\-> reconcile -------/
+schema_management -> extract -> transform -> load -> commit_watermark --> publish_run_status
+                                                  \\-> reconcile -------/
 ```
 
+* **schema_management** - creates any missing schema objects (schema, tables,
+  indexes). Every statement is rerunnable, so existing objects and data are kept.
 * **extract** - CQL search for pages modified since the load_date (minus an
   overlap), plus dead-lettered pages due a retry; lands raw payloads in S3.
 * **transform** - cleans storage-format XHTML and chunks it; stages JSONL in S3.
@@ -22,6 +24,10 @@ extract -> transform -> load -> commit_watermark --> publish_run_status
 Params: `full_refresh` re-reads every page (embeddings are still reused by
 content hash, so this is cheap unless the text changed); `allow_mass_delete`
 overrides the deletion guard after a confirmed bulk removal.
+
+To re-process a past run without calling Confluence, clear `transform` and `load`
+on that run (without downstream tasks); they re-read the run's extract manifest
+from XCom.
 
 Credentials come from Airflow Connections when defined (`confluence_default`,
 `pgvector_default`, `openai_default`), otherwise from environment variables.
@@ -46,10 +52,8 @@ from confluence_indexer.orchestration.airflow_runtime import (
     run_id,
 )
 
-
-# XCom keys. Every stage pushes its full report under REPORT_KEY. The other keys
-# are names in a report's "outputs" that downstream stages need.
-REPORT_KEY = "report"
+# XCom keys: names in a stage report's "outputs" that downstream stages need.
+# push_report also pushes each full report, under airflow_runtime.REPORT_KEY.
 MANIFEST_URI_KEY = "manifest_uri"
 DOCUMENTS_URI_KEY = "documents_uri"
 RUN_STARTED_AT_KEY = "run_started_at"
@@ -85,6 +89,12 @@ PIPELINE_TASKS = ("extract", "transform", "load", "commit_watermark", "reconcile
     doc_md=__doc__,
 )
 def confluence_indexing() -> None:
+    @task
+    def schema_management() -> None:
+        from confluence_indexer.orchestration.tasks import run_schema_management
+
+        run_schema_management(pipeline_config())
+
     @task
     def extract() -> None:
         from confluence_indexer.orchestration.tasks import run_extract
@@ -142,7 +152,7 @@ def confluence_indexing() -> None:
     # commit_watermark and reconcile take load as upstream so they wait for a successful load.
     extracted, transformed, loaded = extract(), transform(), load()
     finished = [commit_watermark(), reconcile()]
-    extracted >> transformed >> loaded >> finished
+    schema_management() >> extracted >> transformed >> loaded >> finished
     extracted >> finished
     finished >> publish_run_status()
 

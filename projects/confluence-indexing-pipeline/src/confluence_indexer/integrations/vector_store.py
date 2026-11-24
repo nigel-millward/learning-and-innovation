@@ -20,7 +20,7 @@ from pgvector.psycopg import register_vector
 from psycopg.rows import dict_row
 
 from ..models import IndexedPage, PageDocument
-from ..sql import migrations, query
+from ..sql import query, schema_management
 
 log = logging.getLogger(__name__)
 
@@ -261,27 +261,25 @@ def chunk_metadata(document: PageDocument, chunk_index: int) -> dict[str, Any]:
     }
 
 
-def apply_migrations(database_connection_string: str, embedding_dimensions: int) -> list[str]:
-    """Apply pending migrations once each, in order. Returns the files applied.
+def apply_schema_management(
+    database_connection_string: str, embedding_dimensions: int
+) -> list[str]:
+    """Create any missing schema objects. Returns the scripts run, in order.
 
-    ``:embedding_dimensions`` in a migration is replaced with the configured
+    Every script runs on every call, so each must be rerunnable (IF NOT EXISTS,
+    guarded changes). ``:embedding_dimensions`` is replaced with the configured
     vector size, the same variable ``psql -v embedding_dimensions=N`` would set.
     """
     applied: list[str] = []
     with psycopg.connect(database_connection_string, autocommit=True) as conn:
-        conn.execute(query("migrations_create_table"))
-        conn.execute(query("migrations_lock"))
+        conn.execute(query("schema_management_lock"))
         try:
-            done = {row[0] for row in conn.execute(query("migrations_applied"))}
-            for migration in migrations():
-                if migration.name in done:
-                    continue
-                log.info("Applying migration %s", migration.name)
-                ddl = _DIMENSIONS_VAR.sub(str(int(embedding_dimensions)), migration.read_text())
+            for script in schema_management():
+                log.info("Applying schema script %s", script.name)
+                ddl = _DIMENSIONS_VAR.sub(str(int(embedding_dimensions)), script.read_text())
                 with conn.transaction():
                     conn.execute(ddl.encode())
-                    conn.execute(query("migrations_record"), {"name": migration.name})
-                applied.append(migration.name)
+                applied.append(script.name)
         finally:
-            conn.execute(query("migrations_unlock"))
+            conn.execute(query("schema_management_unlock"))
     return applied
