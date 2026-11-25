@@ -31,22 +31,22 @@ def transform(
     manifest = landing.get_json(manifest_uri)
 
     def documents() -> Iterator[dict[str, Any]]:
-        for ref in manifest["pages"]:
+        for manifest_entry in manifest["pages"]:
             try:
-                payload = landing.get_raw_page(ref["raw_uri"])
+                payload = landing.get_raw_page(manifest_entry["raw_uri"])
                 meta = PageMetadata.from_api(payload, config.confluence.base_url)
                 storage = ((payload.get("body") or {}).get("storage") or {}).get("value", "")
                 text = cleaner.clean(storage, meta.title)
                 chunks = chunker.chunk(meta, text)
             except Exception as exc:
-                page_failed(store, report, ref["page_id"], exc, run_id)
+                page_failed(store, report, manifest_entry["page_id"], exc, run_id)
                 continue
             report.counts["pages_transformed"] += 1
             report.counts["chunks_produced"] += len(chunks)
             if not chunks:
                 report.counts["pages_empty"] += 1
             yield PageDocument(
-                metadata=meta, raw_uri=ref["raw_uri"], chunks=tuple(chunks)
+                metadata=meta, raw_uri=manifest_entry["raw_uri"], chunks=tuple(chunks)
             ).to_dict()
 
     documents_uri = landing.put_run_jsonl(run_id, "documents.jsonl", documents())

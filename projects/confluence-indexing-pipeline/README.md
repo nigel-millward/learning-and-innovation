@@ -68,6 +68,111 @@ That tells you what to fake in a test, and avoids a catch-all `libs/`.
 `embedding_version` is `provider:model:dimensions:revision`. Vectors are only
 reused within the same version, so changing the model can never mix vector spaces.
 
+## Extract manifest and raw page example
+
+Each extract run writes its own `extract_manifest.json`. Its `pages` array has
+one entry for each page successfully fetched and saved during that run. A daily
+incremental run includes pages that need fetching because they changed (including
+the load-date overlap) and retryable failures; unchanged, vanished, or failed
+pages do not get entries. Thus, it lists the pages extracted by that run, not
+every page in Confluence. A full refresh fetches every page returned by the
+Confluence search.
+
+The manifest stores page IDs, versions, and S3 URIs; the page payload is stored
+separately at each `raw_uri`. `transform` reads that payload from S3 for each
+entry. The following sample shows five successful entries:
+
+```json
+{
+  "run_id": "scheduled__2026-11-25T02:00:00+00:00",
+  "run_started_at": "2026-11-25T02:00:01+00:00",
+  "since": "2026-11-24T01:30:00+00:00",
+  "full_refresh": false,
+  "embedding_version": "ollama:nomic-embed-text:768:r1",
+  "pages": [
+    {
+      "page_id": "1001",
+      "version": 1,
+      "raw_uri": "s3://confluence-indexing-landing/confluence-indexing/raw/space=ENG/page_id=1001/version=1.json"
+    },
+    {
+      "page_id": "1002",
+      "version": 3,
+      "raw_uri": "s3://confluence-indexing-landing/confluence-indexing/raw/space=ENG/page_id=1002/version=3.json"
+    },
+    {
+      "page_id": "1003",
+      "version": 2,
+      "raw_uri": "s3://confluence-indexing-landing/confluence-indexing/raw/space=ENG/page_id=1003/version=2.json"
+    },
+    {
+      "page_id": "1004",
+      "version": 1,
+      "raw_uri": "s3://confluence-indexing-landing/confluence-indexing/raw/space=ENG/page_id=1004/version=1.json"
+    },
+    {
+      "page_id": "1005",
+      "version": 4,
+      "raw_uri": "s3://confluence-indexing-landing/confluence-indexing/raw/space=ENG/page_id=1005/version=4.json"
+    }
+  ]
+}
+```
+
+For example, `page_id=1001/version=1.json` contains an envelope with the original
+Confluence page under `payload`:
+
+```json
+{
+  "schema_version": 1,
+  "source": "confluence",
+  "run_id": "scheduled__2026-11-25T02:00:00+00:00",
+  "extracted_at": "2026-11-25T02:00:02+00:00",
+  "payload": {
+    "id": "1001",
+    "type": "page",
+    "status": "current",
+    "title": "Deployment runbook",
+    "space": {
+      "key": "ENG",
+      "name": "Engineering"
+    },
+    "version": {
+      "number": 1,
+      "when": "2026-11-25T01:45:00.000Z",
+      "by": {
+        "displayName": "Ada"
+      }
+    },
+    "ancestors": [
+      {
+        "id": "1",
+        "title": "Engineering Home"
+      }
+    ],
+    "metadata": {
+      "labels": {
+        "results": [
+          {
+            "name": "runbook"
+          }
+        ]
+      }
+    },
+    "body": {
+      "storage": {
+        "value": "<p>Steps for deploying the service.</p>",
+        "representation": "storage"
+      }
+    },
+    "_links": {
+      "webui": "/spaces/ENG/pages/1001",
+      "base": "https://example.atlassian.net/wiki"
+    }
+  }
+}
+```
+
 ## Run it locally
 
 Prerequisites: Docker, [Ollama](https://ollama.com) (`brew install ollama`), Python 3.11+,
