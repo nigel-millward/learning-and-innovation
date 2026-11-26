@@ -25,6 +25,11 @@ class Chunker:
     """
 
     def __init__(self, config: ChunkingConfig) -> None:
+        """Build the tokenizer and a Markdown-aware, token-sized recursive splitter.
+
+        Args:
+            config: Chunking settings: tiktoken encoding, chunk size and overlap in tokens.
+        """
         self._encoding = tiktoken.get_encoding(config.encoding_name)
         self._splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             encoding_name=config.encoding_name,
@@ -39,6 +44,18 @@ class Chunker:
         )
 
     def chunk(self, page: PageMetadata, text: str) -> list[Chunk]:
+        """Split a page's cleaned text into chunks ready for embedding.
+
+        Each chunk records the heading path in force where it starts, and its
+        embedding text (and token count) includes the contextual header.
+
+        Args:
+            page: Metadata of the page the text belongs to.
+            text: Cleaned lightweight Markdown from ``StorageFormatCleaner``.
+
+        Returns:
+            The non-empty chunks in page order, numbered from zero; empty for blank text.
+        """
         if not text.strip():
             return []
         headings = _heading_positions(text)
@@ -64,13 +81,32 @@ class Chunker:
 
 
 def _heading_positions(text: str) -> list[tuple[int, int, str]]:
+    """Find the Markdown headings in text.
+
+    Args:
+        text: Cleaned lightweight Markdown.
+
+    Returns:
+        ``(offset, level, title)`` for each ``#`` heading line, in order of offset.
+    """
     return [(m.start(), len(m.group(1)), m.group(2).strip()) for m in _HEADING.finditer(text)]
 
 
 def _section_at(
     headings: list[tuple[int, int, str]], offsets: list[int], position: int
 ) -> tuple[str, ...]:
-    """Heading path in force at ``position`` (a chunk starting on a heading belongs to it)."""
+    """Return the heading path in force at ``position``.
+
+    A chunk starting exactly on a heading belongs to that heading.
+
+    Args:
+        headings: Output of ``_heading_positions``.
+        offsets: The offsets of ``headings``, for bisection.
+        position: Character offset of the chunk start in the page text.
+
+    Returns:
+        Heading titles from outermost to innermost; empty before the first heading.
+    """
     stack: list[tuple[int, str]] = []
     for _, level, title in headings[: bisect.bisect_right(offsets, position)]:
         while stack and stack[-1][0] >= level:
@@ -80,6 +116,16 @@ def _section_at(
 
 
 def _contextual_header(page: PageMetadata, section: tuple[str, ...]) -> str:
+    """Build the header prepended to a chunk's embedding text.
+
+    Args:
+        page: Metadata supplying the title, space and ancestor path.
+        section: Heading path of the chunk.
+
+    Returns:
+        ``Title:``, plus ``Space:``, ``Path:`` and ``Section:`` lines where known,
+        followed by a blank line.
+    """
     lines = [f"Title: {page.title}"]
     if page.space_name or page.space_key:
         lines.append(f"Space: {page.space_name or page.space_key}")

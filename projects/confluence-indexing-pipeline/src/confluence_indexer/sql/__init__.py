@@ -18,11 +18,22 @@ _ROOT = files(__name__)
 
 @cache
 def query(name: str) -> str:
-    """The text of ``queries/{name}.sql``."""
+    """Return the text of ``queries/{name}.sql``, cached per process.
+
+    Args:
+        name: Query file name without the ``.sql`` extension.
+
+    Returns:
+        The SQL statement.
+    """
     return _ROOT.joinpath("queries", f"{name}.sql").read_text(encoding="utf-8")
 
 
 def schema_management() -> list[Traversable]:
-    """Schema management scripts, in the order they must be applied."""
+    """Return the schema management scripts, in the order they must be applied.
+
+    Returns:
+        The ``schema_management/*.sql`` files, sorted by file name.
+    """
     found = [f for f in _ROOT.joinpath("schema_management").iterdir() if f.name.endswith(".sql")]
     return sorted(found, key=lambda f: f.name)

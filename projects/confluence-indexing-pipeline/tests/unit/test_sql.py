@@ -1,3 +1,5 @@
+"""Tests for the SQL files and how the vector store uses them."""
+
 import re
 from pathlib import Path
 

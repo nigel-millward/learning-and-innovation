@@ -28,6 +28,20 @@ class ConfigError(ValueError):
 
 @dataclass(frozen=True)
 class ConfluenceConfig:
+    """Connection and paging settings for the Confluence REST API.
+
+    Attributes:
+        base_url: Site base URL without a trailing slash.
+        api_token: Cloud API token, or Data Center personal access token.
+        username: Account email for Cloud basic auth; unset for Data Center bearer auth.
+        space_keys: Spaces to index; empty means every space the account can see.
+        cql_timezone: Timezone CQL uses for ``lastmodified``: the API user's profile one.
+        page_size: Page size for incremental CQL searches.
+        reconcile_page_size: Page size when listing every page ID for reconcile.
+        timeout_seconds: HTTP timeout per request.
+        max_retries: Retries for throttled or failed requests.
+    """
+
     base_url: str  # e.g. https://example.atlassian.net/wiki
     api_token: str = field(repr=False)
     # Cloud authenticates with email + API token (basic auth). Leave unset for
@@ -42,6 +56,11 @@ class ConfluenceConfig:
     max_retries: int = 5
 
     def __post_init__(self) -> None:
+        """Reject space keys that could break out of the CQL query.
+
+        Raises:
+            ConfigError: If a space key contains characters outside ``[A-Za-z0-9~_-]``.
+        """
         for key in self.space_keys:
             if not _SPACE_KEY.match(key):
                 raise ConfigError(f"Invalid Confluence space key: {key!r}")
@@ -49,6 +68,14 @@ class ConfluenceConfig:
 
 @dataclass(frozen=True)
 class LandingConfig:
+    """Location of the S3 landing zone.
+
+    Attributes:
+        bucket: S3 bucket name.
+        prefix: Key prefix for everything the pipeline writes, without slashes at the ends.
+        kms_key_id: KMS key for server-side encryption; unset uses the bucket default.
+    """
+
     bucket: str
     prefix: str = "confluence-indexing"
     kms_key_id: str | None = None
@@ -56,12 +83,27 @@ class LandingConfig:
 
 @dataclass(frozen=True)
 class ChunkingConfig:
+    """How cleaned page text is split into chunks.
+
+    Attributes:
+        chunk_size_tokens: Maximum tokens per chunk.
+        chunk_overlap_tokens: Tokens shared between neighbouring chunks.
+        encoding_name: tiktoken encoding used to count tokens.
+        boilerplate_patterns: Extra regexes; a block matching one in full is dropped.
+    """
+
     chunk_size_tokens: int = 800
     chunk_overlap_tokens: int = 120  # 15%
     encoding_name: str = "cl100k_base"  # tokenizer used by text-embedding-3-*
     boilerplate_patterns: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
+        """Validate the chunk size and overlap.
+
+        Raises:
+            ConfigError: If the size is not positive or the overlap is not in
+                ``[0, chunk_size_tokens)``.
+        """
         if self.chunk_size_tokens <= 0:
             raise ConfigError("CHUNK_SIZE_TOKENS must be positive")
         if not 0 <= self.chunk_overlap_tokens < self.chunk_size_tokens:
@@ -79,6 +121,24 @@ DEFAULT_EMBEDDING_MODELS = {
 
 @dataclass(frozen=True)
 class EmbeddingConfig:
+    """Embedding provider and model settings.
+
+    Attributes:
+        provider: One of ``ollama``, ``openai``, ``azure_openai`` or ``bedrock``.
+        model: Model name, Azure deployment name, or Bedrock model ID.
+        dimensions: Length of each embedding vector.
+        revision: Bump to force every chunk to be re-embedded even though its
+            text is unchanged, e.g. after a provider-side model update that kept
+            the same name.
+        batch_size: Texts sent per embedding request.
+        timeout_seconds: Timeout per embedding request.
+        api_key: API key for OpenAI or Azure OpenAI.
+        ollama_base_url: URL of the Ollama server.
+        azure_endpoint: Azure OpenAI resource endpoint.
+        azure_api_version: Azure OpenAI API version.
+        aws_region: Region for Bedrock.
+    """
+
     provider: str  # ollama | openai | azure_openai | bedrock
     model: str  # model name, Azure deployment name, or Bedrock model id
     dimensions: int
@@ -94,6 +154,12 @@ class EmbeddingConfig:
     aws_region: str | None = None
 
     def __post_init__(self) -> None:
+        """Validate the provider and its required settings.
+
+        Raises:
+            ConfigError: If the provider is unsupported, or is ``azure_openai``
+                without an endpoint.
+        """
         if self.provider not in DEFAULT_EMBEDDING_MODELS:
             raise ConfigError(f"Unsupported EMBEDDING_PROVIDER: {self.provider!r}")
         if self.provider == "azure_openai" and not self.azure_endpoint:
@@ -110,11 +176,25 @@ class EmbeddingConfig:
 
 @dataclass(frozen=True)
 class DatabaseConfig:
+    """PostgreSQL connection settings.
+
+    Attributes:
+        database_connection_string: libpq connection URI for the pgvector database.
+    """
+
     database_connection_string: str = field(repr=False)
 
 
 @dataclass(frozen=True)
 class ObservabilityConfig:
+    """Metrics and alerting settings.
+
+    Attributes:
+        metrics_namespace: CloudWatch namespace for pipeline metrics.
+        alert_topic_arn: SNS topic for alerts; unset disables alerts.
+        notify_on_success: Also publish a message when a run succeeds.
+    """
+
     metrics_namespace: str = "ConfluenceIndexing"
     alert_topic_arn: str | None = None
     notify_on_success: bool = False
@@ -122,6 +202,17 @@ class ObservabilityConfig:
 
 @dataclass(frozen=True)
 class GuardrailConfig:
+    """Limits that protect the index from partial or faulty runs.
+
+    Attributes:
+        load_date_overlap: How far behind the stored load_date to re-read.
+        max_failure_ratio: Fraction of failed pages above which a stage fails.
+        max_page_attempts: Retries for a dead-lettered page before it is parked.
+        max_delete_ratio: Largest fraction of the index one run may delete.
+        mass_delete_min_pages: Deletions up to this many pages are always allowed.
+        load_batch_pages: Pages written to the store per batch.
+    """
+
     # Re-read this far behind the stored load_date: CQL dates have minute
     # precision and the Confluence search index is eventually consistent.
     load_date_overlap: timedelta = timedelta(minutes=30)
@@ -140,6 +231,21 @@ class GuardrailConfig:
 
 @dataclass(frozen=True)
 class PipelineConfig:
+    """All settings for one pipeline deployment.
+
+    Attributes:
+        pipeline_name: Name used for state rows, S3 keys and metrics.
+        environment: Deployment environment, e.g. ``dev`` or ``prod``.
+        aws_region: AWS region for Secrets Manager and other AWS clients.
+        confluence: Confluence API settings.
+        landing: S3 landing zone settings.
+        chunking: Chunking settings.
+        embedding: Embedding provider settings.
+        database: PostgreSQL settings.
+        observability: Metrics and alerting settings.
+        guardrails: Safety limits.
+    """
+
     pipeline_name: str
     environment: str
     aws_region: str | None
@@ -153,6 +259,20 @@ class PipelineConfig:
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> PipelineConfig:
+        """Build the configuration from environment variables.
+
+        Empty values count as unset. Secrets may be given directly or as a
+        ``<NAME>_SECRET_ID`` reference to AWS Secrets Manager.
+
+        Args:
+            env: Variables to read; defaults to ``os.environ``.
+
+        Returns:
+            The pipeline configuration.
+
+        Raises:
+            ConfigError: If a required variable is missing or a value is invalid.
+        """
         e = _Env(os.environ if env is None else env)
         region = e.get("AWS_REGION") or e.get("AWS_DEFAULT_REGION")
         provider = e.get("EMBEDDING_PROVIDER", "ollama")
@@ -216,6 +336,19 @@ class PipelineConfig:
 
 
 def _embedding_api_key(e: _Env, provider: str, region: str | None) -> str | None:
+    """Resolve the API key the embedding provider needs, if any.
+
+    Args:
+        e: Environment reader.
+        provider: Embedding provider name.
+        region: AWS region for Secrets Manager lookups.
+
+    Returns:
+        The OpenAI or Azure OpenAI key, or None for providers that need no key.
+
+    Raises:
+        ConfigError: If the provider needs a key and none is set.
+    """
     if provider == "openai":
         return e.secret("OPENAI_API_KEY", region, required=True)
     if provider == "azure_openai":
@@ -228,6 +361,18 @@ def _database_connection_string(e: _Env, region: str | None) -> str:
 
     ``PG_DSN_SECRET_ID`` may point at an RDS-managed secret (JSON with
     username/password/host/port/dbname) or at a plain connection string.
+
+    Args:
+        e: Environment reader.
+        region: AWS region for Secrets Manager lookups.
+
+    Returns:
+        A connection URI. For an RDS secret, ``sslmode`` comes from
+        ``PG_SSLMODE`` (default ``verify-full``).
+
+    Raises:
+        ConfigError: If neither ``PG_DSN`` nor ``PG_DSN_SECRET_ID`` is set, or
+            the secret is JSON but not an object.
     """
     raw = e.secret("PG_DSN", region, required=True)
     try:
@@ -245,34 +390,114 @@ def _database_connection_string(e: _Env, region: str | None) -> str:
 
 
 class _Env:
+    """Typed reader over a mapping of environment variables."""
+
     def __init__(self, env: Mapping[str, str]) -> None:
+        """Wrap a mapping of environment variables.
+
+        Args:
+            env: Variables to read.
+        """
         self._env = env
 
     def get(self, name: str, default: Any = None) -> Any:
+        """Return a variable, treating an empty value as unset.
+
+        Args:
+            name: Variable name.
+            default: Value returned when the variable is unset or empty.
+
+        Returns:
+            The variable's value, or ``default``.
+        """
         value = self._env.get(name)
         return default if value is None or value == "" else value
 
     def require(self, name: str) -> str:
+        """Return a variable that must be set.
+
+        Args:
+            name: Variable name.
+
+        Returns:
+            The variable's value.
+
+        Raises:
+            ConfigError: If the variable is unset or empty.
+        """
         value = self.get(name)
         if value is None:
             raise ConfigError(f"Missing required environment variable {name}")
         return str(value)
 
     def int_(self, name: str, default: int) -> int:
+        """Return a variable as an int.
+
+        Args:
+            name: Variable name.
+            default: Value used when the variable is unset or empty.
+
+        Returns:
+            The parsed integer.
+
+        Raises:
+            ValueError: If the value is not an integer.
+        """
         return int(self.get(name, default))
 
     def float_(self, name: str, default: float) -> float:
+        """Return a variable as a float.
+
+        Args:
+            name: Variable name.
+            default: Value used when the variable is unset or empty.
+
+        Returns:
+            The parsed float.
+
+        Raises:
+            ValueError: If the value is not a number.
+        """
         return float(self.get(name, default))
 
     def bool_(self, name: str, default: bool) -> bool:
+        """Return a variable as a bool.
+
+        Args:
+            name: Variable name.
+            default: Value used when the variable is unset or empty.
+
+        Returns:
+            True for ``1``, ``true``, ``yes`` or ``on`` (any case), else False.
+        """
         value = self.get(name)
         return default if value is None else str(value).lower() in {"1", "true", "yes", "on"}
 
     def csv(self, name: str) -> tuple[str, ...]:
+        """Return a comma-separated variable as a tuple.
+
+        Args:
+            name: Variable name.
+
+        Returns:
+            The stripped, non-empty items; empty when the variable is unset.
+        """
         value = self.get(name, "")
         return tuple(part.strip() for part in value.split(",") if part.strip())
 
     def json_list(self, name: str) -> list[str]:
+        """Return a variable holding a JSON array of strings.
+
+        Args:
+            name: Variable name.
+
+        Returns:
+            The parsed list; empty when the variable is unset.
+
+        Raises:
+            ConfigError: If the value is not a JSON array of strings.
+            json.JSONDecodeError: If the value is not valid JSON.
+        """
         value = self.get(name)
         if value is None:
             return []
@@ -282,7 +507,19 @@ class _Env:
         return parsed
 
     def secret(self, name: str, region: str | None, *, required: bool = False) -> Any:
-        """Read ``NAME`` directly, else fetch the secret named by ``NAME_SECRET_ID``."""
+        """Read ``NAME`` directly, else fetch the secret named by ``NAME_SECRET_ID``.
+
+        Args:
+            name: Variable name of the secret.
+            region: AWS region for the Secrets Manager lookup.
+            required: Raise if neither form is set.
+
+        Returns:
+            The secret value, or None if it is not set and not required.
+
+        Raises:
+            ConfigError: If ``required`` and neither variable is set.
+        """
         value = self.get(name)
         if value is None and (secret_id := self.get(f"{name}_SECRET_ID")):
             value = _fetch_secret(secret_id, region)
@@ -293,6 +530,15 @@ class _Env:
 
 @cache
 def _fetch_secret(secret_id: str, region: str | None) -> str:
+    """Fetch a secret string from AWS Secrets Manager, cached per process.
+
+    Args:
+        secret_id: Secret name or ARN.
+        region: AWS region of the secret.
+
+    Returns:
+        The secret's ``SecretString``.
+    """
     import boto3
 
     response = boto3.client("secretsmanager", region_name=region).get_secret_value(

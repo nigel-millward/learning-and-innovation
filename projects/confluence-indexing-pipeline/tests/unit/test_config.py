@@ -1,3 +1,5 @@
+"""Tests for building PipelineConfig from the environment and AWS secrets."""
+
 import json
 
 import boto3

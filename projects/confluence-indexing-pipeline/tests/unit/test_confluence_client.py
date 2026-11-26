@@ -1,3 +1,5 @@
+"""Tests for the Confluence REST client."""
+
 from datetime import UTC, datetime
 
 import httpx

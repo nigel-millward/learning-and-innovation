@@ -1,3 +1,5 @@
+"""Tests for token-based chunking of cleaned page text."""
+
 from datetime import UTC, datetime
 from itertools import pairwise
 

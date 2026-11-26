@@ -27,7 +27,30 @@ def extract(
     full_refresh: bool = False,
     now: datetime | None = None,
 ) -> StageReport:
-    """Find pages changed since the load_date and land their raw payloads in S3."""
+    """Find pages changed since the load_date and land their raw payloads in S3.
+
+    The CQL search starts ``load_date_overlap`` before the stored load date (or
+    covers everything on a full refresh or first run). A changed page is fetched
+    only if it is unindexed, newer than the indexed version, or was embedded
+    under a different embedding version; previously failed pages still within
+    their attempt budget are retried too. A manifest of the landed pages is
+    written for the transform stage.
+
+    Args:
+        config: Pipeline configuration.
+        confluence: Client used to search for and fetch pages.
+        landing: S3 landing zone for raw payloads and the manifest.
+        store: Vector store holding the load date, indexed pages and dead letters.
+        run_id: ID of the pipeline run, used to namespace landed objects.
+        full_refresh: Ignore the load date and refetch every page.
+        now: Run start time; defaults to the current UTC time.
+
+    Returns:
+        The stage report; ``outputs`` holds ``manifest_uri`` and ``run_started_at``.
+
+    Raises:
+        StageFailedError: If too many pages failed to be fetched or landed.
+    """
     started = time.monotonic()
     report = StageReport("extract")
     # Captured before searching: anything modified from here on is picked up next run.
@@ -93,6 +116,17 @@ def extract(
 
 
 def _needs_fetch(indexed: IndexedPage | None, version: int, embedding_version: str) -> bool:
+    """Decide whether a changed page must be re-extracted.
+
+    Args:
+        indexed: The page's current index entry, or None if it is not indexed.
+        version: The page's current Confluence version.
+        embedding_version: The configured embedding version.
+
+    Returns:
+        True if the page is unindexed, has a newer version, or was embedded
+        under a different embedding version.
+    """
     return (
         indexed is None
         or indexed.version < version

@@ -36,6 +36,11 @@ log = logging.getLogger("run_pipeline_locally")
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse the command-line arguments.
+
+    Returns:
+        The parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="Run the pipeline locally, without Airflow.")
     parser.add_argument("--full-refresh", action="store_true", help="ignore the load_date")
     parser.add_argument("--allow-mass-delete", action="store_true", help="bypass deletion guard")
@@ -55,7 +60,18 @@ def parse_args() -> argparse.Namespace:
 
 
 def run_pipeline(config: PipelineConfig, run_id: str, args: argparse.Namespace) -> int:
-    """Every stage in DAG order. A failure stops the run, then the summary still runs."""
+    """Run every stage in DAG order.
+
+    A failure stops the run, then the summary still runs.
+
+    Args:
+        config: Pipeline config.
+        run_id: ID for this run.
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code: 0 if the run succeeded, otherwise 1.
+    """
     reports: dict[str, dict[str, Any] | None] = {}
     try:
         extracted = reports["extract"] = run_extract(config, run_id, full_refresh=args.full_refresh)
@@ -76,6 +92,16 @@ def run_pipeline(config: PipelineConfig, run_id: str, args: argparse.Namespace) 
 
 
 def replay(config: PipelineConfig, run_id: str, manifest_uri: str) -> int:
+    """Re-run transform and load from a past extract manifest, without calling Confluence.
+
+    Args:
+        config: Pipeline config.
+        run_id: ID for this replay run.
+        manifest_uri: S3 URI of the past run's ``extract_manifest.json``.
+
+    Returns:
+        Exit code 0.
+    """
     transformed = run_transform(config, run_id, manifest_uri)
     loaded = run_load(config, run_id, transformed["outputs"]["documents_uri"])
     print(json.dumps({"transform": transformed, "load": loaded}, indent=2, default=str))
@@ -83,6 +109,11 @@ def replay(config: PipelineConfig, run_id: str, manifest_uri: str) -> int:
 
 
 def main() -> int:
+    """Create the schema unless skipped, then run the pipeline or a replay.
+
+    Returns:
+        The process exit code.
+    """
     args = parse_args()
     logging.basicConfig(
         level=args.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s"

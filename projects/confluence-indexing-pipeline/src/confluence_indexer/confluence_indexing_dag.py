@@ -1,11 +1,10 @@
-"""
-### Confluence -> pgvector indexing (Airflow 3)
+r"""Confluence -> pgvector indexing DAG for Airflow 3.
 
 Daily incremental indexing of Confluence pages into PostgreSQL/pgvector.
 
 ```
 schema_management -> extract -> transform -> load -> commit_watermark --> publish_run_status
-                                                  \\-> reconcile -------/
+                                                  \-> reconcile -------/
 ```
 
 * **schema_management** - creates any missing schema objects (schema, tables,
@@ -89,14 +88,22 @@ PIPELINE_TASKS = ("extract", "transform", "load", "commit_watermark", "reconcile
     doc_md=__doc__,
 )
 def confluence_indexing() -> None:
+    """Define the confluence_indexing DAG's tasks and their dependencies.
+
+    The task order is described in the module docstring, which is also the
+    DAG's documentation in the Airflow UI.
+    """
+
     @task
     def schema_management() -> None:
+        """Create any missing schema objects in the vector store."""
         from confluence_indexer.orchestration.tasks import run_schema_management
 
         run_schema_management(pipeline_config())
 
     @task
     def extract() -> None:
+        """Land changed and retry-due pages in S3 and push the manifest URI and start time."""
         from confluence_indexer.orchestration.tasks import run_extract
 
         report = run_extract(pipeline_config(), run_id(), full_refresh=bool_param("full_refresh"))
@@ -104,6 +111,7 @@ def confluence_indexing() -> None:
 
     @task
     def transform() -> None:
+        """Clean and chunk the extracted pages and push the staged documents URI."""
         from confluence_indexer.orchestration.tasks import run_transform
 
         manifest_uri = pull_output("extract", MANIFEST_URI_KEY)
@@ -112,6 +120,7 @@ def confluence_indexing() -> None:
 
     @task(execution_timeout=timedelta(hours=4), outlets=[CONFLUENCE_INDEX])
     def load() -> None:
+        """Embed the staged documents and write them to the vector store."""
         from confluence_indexer.orchestration.tasks import run_load
 
         documents_uri = pull_output("transform", DOCUMENTS_URI_KEY)
@@ -119,6 +128,7 @@ def confluence_indexing() -> None:
 
     @task
     def commit_watermark() -> None:
+        """Advance the load_date to the start time of this run's extract."""
         from confluence_indexer.orchestration.tasks import run_commit_watermark
 
         started_at = pull_output("extract", RUN_STARTED_AT_KEY)
@@ -126,6 +136,7 @@ def confluence_indexing() -> None:
 
     @task(outlets=[CONFLUENCE_INDEX])
     def reconcile() -> None:
+        """Remove pages deleted or hidden in Confluence, behind the mass-deletion guard."""
         from confluence_indexer.orchestration.tasks import run_reconcile
 
         started_at = pull_output("extract", RUN_STARTED_AT_KEY)
@@ -139,6 +150,14 @@ def confluence_indexing() -> None:
 
     @task(trigger_rule="all_done", retries=0, on_failure_callback=None)
     def publish_run_status() -> dict[str, Any]:
+        """Publish metrics, the audit row and alerts for the run, then fail if a stage failed.
+
+        Returns:
+            The run's overall status and its aggregated counts.
+
+        Raises:
+            RuntimeError: If any pipeline stage failed or did not run.
+        """
         from confluence_indexer.orchestration.tasks import run_summary
 
         # A failed or skipped task pushes no report, so a missing report = failed stage.

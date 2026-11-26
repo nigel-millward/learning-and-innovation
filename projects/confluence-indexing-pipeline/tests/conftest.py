@@ -1,3 +1,5 @@
+"""Shared pytest fixtures and in-memory fakes for the pipeline tests."""
+
 from __future__ import annotations
 
 import hashlib

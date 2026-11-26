@@ -1,3 +1,5 @@
+"""Tests for the pipeline stages run end to end against fakes."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta

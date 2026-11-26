@@ -51,14 +51,20 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+# D400/D401 are off under the google convention; re-enabled for PEP 257's
+# imperative summary line ending in a period.
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "D", "D400", "D401"]
 ignore = [
     "S101", # assert is fine in tests
     "S608", # SQL is built from constants, never from user input
 ]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S105", "S106"] # fixture credentials
+# fixture credentials; tests need only a module docstring, test names describe the rest
+"tests/**" = ["S105", "S106", "D101", "D102", "D103", "D105", "D106", "D107"]
 
 [tool.mypy]
 python_version = "3.11"

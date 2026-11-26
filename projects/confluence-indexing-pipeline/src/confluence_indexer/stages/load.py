@@ -28,7 +28,24 @@ def load(
     run_id: str,
     documents_uri: str,
 ) -> StageReport:
-    """Embed new or changed chunks and write pages atomically to pgvector."""
+    """Embed new or changed chunks and write pages atomically to pgvector.
+
+    Documents are processed in groups of ``guardrails.load_batch_pages``.
+
+    Args:
+        config: Pipeline configuration.
+        landing: S3 landing zone holding the staged documents.
+        store: Vector store the pages are written to.
+        embedder: Provider used to embed chunks without a reusable vector.
+        run_id: ID of the pipeline run.
+        documents_uri: URI of the transform stage's JSONL output.
+
+    Returns:
+        The stage report.
+
+    Raises:
+        StageFailedError: If too many pages failed to load.
+    """
     started = time.monotonic()
     report = StageReport("load")
     store.check_schema(config.embedding.dimensions)
@@ -49,6 +66,21 @@ def _load_group(
     report: StageReport,
     run_id: str,
 ) -> None:
+    """Load one group of documents into the store.
+
+    Pages whose content hash and embedding version match the index are only
+    touched (a new Confluence version that changes nothing indexed); the rest
+    get vectors from ``_resolve_vectors`` and are upserted one page at a time.
+    Per-page failures are dead-lettered.
+
+    Args:
+        config: Pipeline configuration.
+        documents: The documents in this group.
+        store: Vector store the pages are written to.
+        embedder: Provider used to embed missing chunks.
+        report: The load stage's report, updated in place.
+        run_id: ID of the pipeline run.
+    """
     embedding_version = config.embedding.embedding_version
     indexed = store.get_indexed_pages([d.page_id for d in documents])
     pending: list[PageDocument] = []
@@ -95,9 +127,22 @@ def _resolve_vectors(
     report: StageReport,
     run_id: str,
 ) -> tuple[dict[str, Any], set[str]]:
-    """Vectors for every chunk hash: reused from the store where possible, else embedded.
+    """Return vectors for every chunk hash: reused from the store where possible, else embedded.
 
-    Returns the vectors and the IDs of pages that could not be embedded.
+    Missing chunks are embedded in one batch; if that fails, each page is
+    retried on its own and pages that still fail are dead-lettered.
+
+    Args:
+        documents: Documents whose chunks need vectors.
+        store: Vector store searched for existing embeddings.
+        embedder: Provider used to embed missing chunks.
+        embedding_version: Only stored vectors from this version are reused.
+        report: The load stage's report, updated in place.
+        run_id: ID of the pipeline run.
+
+    Returns:
+        The vectors keyed by chunk content hash, and the IDs of pages that could
+        not be embedded.
     """
     chunks = [chunk for document in documents for chunk in document.chunks]
     vectors: dict[str, Any] = dict(
@@ -106,6 +151,14 @@ def _resolve_vectors(
     report.counts["chunks_reused"] += sum(1 for c in chunks if c.content_hash in vectors)
 
     def missing_for(docs: Iterable[PageDocument]) -> dict[str, tuple[str, int]]:
+        """Collect the chunks of ``docs`` that have no vector yet, deduplicated by hash.
+
+        Args:
+            docs: Documents to inspect.
+
+        Returns:
+            ``(embedding_text, token_count)`` keyed by chunk content hash.
+        """
         missing: dict[str, tuple[str, int]] = {}
         for document in docs:
             for chunk in document.chunks:
@@ -116,6 +169,11 @@ def _resolve_vectors(
         return missing
 
     def embed(missing: dict[str, tuple[str, int]]) -> None:
+        """Embed the missing chunks in one call and add the results to ``vectors``.
+
+        Args:
+            missing: Output of ``missing_for``; nothing is done if empty.
+        """
         if not missing:
             return
         new = embedder.embed([text for text, _ in missing.values()])
@@ -140,6 +198,15 @@ def _resolve_vectors(
 
 
 def _batched(items: Iterable[T], size: int) -> Iterator[list[T]]:
+    """Group items into lists of ``size``.
+
+    Args:
+        items: The items to group, consumed lazily.
+        size: Maximum batch size.
+
+    Yields:
+        Consecutive batches; the last may be shorter.
+    """
     batch: list[T] = []
     for item in items:
         batch.append(item)

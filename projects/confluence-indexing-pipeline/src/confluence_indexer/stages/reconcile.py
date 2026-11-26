@@ -27,6 +27,20 @@ def reconcile(
     CQL cannot report deletions, so the full set of live page IDs is compared
     with the index. Pages indexed during this run are excluded, which avoids
     racing the search index for pages created moments ago.
+
+    Args:
+        config: Pipeline configuration supplying the mass-delete guardrails.
+        confluence: Client used to list live page IDs.
+        store: Vector store the pages are removed from.
+        run_started_at: Start of this run; pages indexed since are not considered.
+        allow_mass_delete: Override the mass-delete guard.
+
+    Returns:
+        The stage report.
+
+    Raises:
+        DeletionGuardError: If the deletion exceeds both ``mass_delete_min_pages``
+            and ``max_delete_ratio`` and ``allow_mass_delete`` is not set.
     """
     started = time.monotonic()
     report = StageReport("reconcile")

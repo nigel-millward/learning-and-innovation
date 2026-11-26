@@ -20,6 +20,14 @@ class MetricsPublisher:
     def __init__(
         self, cloudwatch_client: Any, namespace: str, pipeline: str, environment: str
     ) -> None:
+        """Store the client and the dimensions added to every metric.
+
+        Args:
+            cloudwatch_client: boto3 CloudWatch client.
+            namespace: CloudWatch namespace to publish into.
+            pipeline: Value of the ``Pipeline`` dimension.
+            environment: Value of the ``Environment`` dimension.
+        """
         self._cw = cloudwatch_client
         self._namespace = namespace
         self._dimensions = [
@@ -28,6 +36,12 @@ class MetricsPublisher:
         ]
 
     def publish(self, counts: Mapping[str, float], seconds: Mapping[str, float]) -> None:
+        """Publish counts and durations, in batches of up to 500 metrics.
+
+        Args:
+            counts: Metric name to value, published with unit ``Count``.
+            seconds: Metric name to value, published with unit ``Seconds``.
+        """
         now = datetime.now(UTC)
         data = [
             {
@@ -48,16 +62,32 @@ class MetricsPublisher:
 
 
 class Alerter:
+    """Sends pipeline alerts to an SNS topic."""
+
     def __init__(
         self, sns_client: Any, topic_arn: str | None, pipeline: str, environment: str
     ) -> None:
+        """Store the client and the fields added to every alert.
+
+        Args:
+            sns_client: boto3 SNS client.
+            topic_arn: Topic to publish to; None only logs alerts.
+            pipeline: Pipeline name included in the subject and message.
+            environment: Environment name included in the subject and message.
+        """
         self._sns = sns_client
         self._topic_arn = topic_arn
         self._pipeline = pipeline
         self._environment = environment
 
     def send(self, severity: str, summary: str, details: Mapping[str, Any]) -> None:
-        """Publish to SNS. Never raises: alerting must not mask the original failure."""
+        """Publish to SNS. Never raises: alerting must not mask the original failure.
+
+        Args:
+            severity: Severity label, used in the subject and as a message attribute.
+            summary: One-line description, used in the subject.
+            details: Extra fields merged into the JSON message body.
+        """
         if not self._topic_arn:
             log.warning("No ALERT_TOPIC_ARN configured; alert not sent: %s", summary)
             return

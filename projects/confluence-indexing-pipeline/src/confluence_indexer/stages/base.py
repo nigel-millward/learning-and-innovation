@@ -24,9 +24,18 @@ STAGES = ("extract", "transform", "load", "commit_watermark", "reconcile")
 
 
 class FailureRecorder(Protocol):
-    def record_failure(
-        self, page_id: str, stage: str, error: BaseException, run_id: str
-    ) -> None: ...
+    """Anything that can dead-letter a failed page (in practice ``PgVectorStore``)."""
+
+    def record_failure(self, page_id: str, stage: str, error: BaseException, run_id: str) -> None:
+        """Record that a page failed in a stage, so it is retried on a later run.
+
+        Args:
+            page_id: Confluence ID of the failed page.
+            stage: Name of the stage the page failed in.
+            error: The exception that caused the failure.
+            run_id: ID of the pipeline run.
+        """
+        ...
 
 
 class StageFailedError(RuntimeError):
@@ -39,12 +48,26 @@ class DeletionGuardError(RuntimeError):
 
 @dataclass
 class StageReport:
+    """Outcome of one stage run, passed between Airflow tasks via XCom as a dict.
+
+    Attributes:
+        stage: Name of the stage.
+        counts: Named counters (pages extracted, chunks embedded, failures, ...).
+        seconds: Wall-clock duration of the stage.
+        outputs: Values later stages need, such as S3 URIs and the run start time.
+    """
+
     stage: str
     counts: Counter[str] = field(default_factory=Counter)
     seconds: float = 0.0
     outputs: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialise the report to plain JSON-compatible types.
+
+        Returns:
+            The report as a dict, with ``seconds`` rounded to milliseconds.
+        """
         return {
             "stage": self.stage,
             "counts": dict(self.counts),
@@ -54,6 +77,14 @@ class StageReport:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> StageReport:
+        """Rebuild a report from the output of ``to_dict``.
+
+        Args:
+            data: A serialised report; only ``stage`` is required.
+
+        Returns:
+            The reconstructed report.
+        """
         return cls(
             stage=data["stage"],
             counts=Counter(data.get("counts", {})),
@@ -65,7 +96,18 @@ class StageReport:
 def page_failed(
     store: FailureRecorder, report: StageReport, page_id: str, exc: Exception, run_id: str
 ) -> None:
-    """Dead-letter one page so the stage can carry on; it is retried next run."""
+    """Dead-letter one page so the stage can carry on; it is retried next run.
+
+    Logs the error and counts it in ``pages_failed``. A failure to record the
+    dead letter is logged rather than raised.
+
+    Args:
+        store: Where the failure is recorded.
+        report: The current stage's report.
+        page_id: Confluence ID of the failed page.
+        exc: The exception that caused the failure.
+        run_id: ID of the pipeline run.
+    """
     log.error("Page %s failed in %s: %s", page_id, report.stage, exc, exc_info=exc)
     report.counts["pages_failed"] += 1
     try:
@@ -75,7 +117,16 @@ def page_failed(
 
 
 def enforce_failure_budget(config: PipelineConfig, report: StageReport, attempted: int) -> None:
-    """Fail the stage (so Airflow retries it) when too many pages failed to trust it."""
+    """Fail the stage (so Airflow retries it) when too many pages failed to trust it.
+
+    Args:
+        config: Pipeline config supplying ``guardrails.max_failure_ratio``.
+        report: The stage's report, whose ``pages_failed`` count is checked.
+        attempted: Number of pages the stage attempted; zero never fails.
+
+    Raises:
+        StageFailedError: If the share of failed pages exceeds the maximum ratio.
+    """
     failed = report.counts["pages_failed"]
     if attempted and failed / attempted > config.guardrails.max_failure_ratio:
         raise StageFailedError(

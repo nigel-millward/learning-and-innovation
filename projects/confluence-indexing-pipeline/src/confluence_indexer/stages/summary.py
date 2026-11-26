@@ -18,6 +18,15 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class RunSummary:
+    """Final status and metrics of a pipeline run.
+
+    Attributes:
+        status: ``"success"`` or ``"failed"``.
+        failed_stages: Stages that produced no report, in DAG order.
+        counts: Count metrics, named ``<Stage><Counter>`` in CamelCase.
+        seconds: Per-stage ``<Stage>Duration`` timings plus ``RunDuration``.
+    """
+
     status: str
     failed_stages: tuple[str, ...]
     counts: dict[str, float]
@@ -25,6 +34,7 @@ class RunSummary:
 
     @property
     def succeeded(self) -> bool:
+        """Whether every stage completed."""
         return self.status == "success"
 
 
@@ -41,6 +51,23 @@ def summarise(
 
     Hard failures are alerted by the failing task itself, which has the
     exception to hand, so this only alerts on runs that succeeded with problems.
+
+    A run fails if any stage in ``STAGES`` has no report. The run is recorded
+    in the database (failures to do so are only logged), metrics are
+    published, and a warning is sent if pages failed or are parked in the
+    dead-letter table, or an info alert if ``notify_on_success`` is set.
+
+    Args:
+        config: Pipeline configuration.
+        reports: Serialised stage reports keyed by stage name; None or empty for
+            stages that did not complete.
+        run_id: ID of the pipeline run.
+        store: Vector store for the run audit row, or None to skip it.
+        metrics: Publisher for the count and duration metrics.
+        alerter: Destination for degraded-success and success alerts.
+
+    Returns:
+        The run's status, failed stages and metrics.
     """
     parsed = {name: StageReport.from_dict(r) for name, r in reports.items() if r}
     failed_stages = tuple(stage for stage in STAGES if stage not in parsed)
@@ -82,4 +109,12 @@ def summarise(
 
 
 def _camel(name: str) -> str:
+    """Convert a snake_case or punctuated name to CamelCase for metric names.
+
+    Args:
+        name: For example ``pages_failed`` or ``commit_watermark``.
+
+    Returns:
+        The CamelCase name, e.g. ``PagesFailed``.
+    """
     return "".join(part.capitalize() for part in re.split(r"[_\W]+", name) if part)

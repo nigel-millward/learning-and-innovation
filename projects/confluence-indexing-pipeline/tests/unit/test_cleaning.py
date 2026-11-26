@@ -1,3 +1,5 @@
+"""Tests for cleaning Confluence storage-format XHTML into plain text."""
+
 from confluence_indexer.processing.cleaning import StorageFormatCleaner
 
 clean = StorageFormatCleaner().clean

@@ -1,3 +1,5 @@
+"""Tests for the Ollama embedding provider: batching, dimension checks and errors."""
+
 from types import SimpleNamespace
 
 import httpx
