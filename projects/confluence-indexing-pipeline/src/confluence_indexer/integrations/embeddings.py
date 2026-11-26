@@ -22,14 +22,30 @@ Vector = list[float]
 
 
 class EmbeddingError(RuntimeError):
-    pass
+    """Raised when an embedding request fails or returns unexpected vectors."""
 
 
 class EmbeddingProvider(Protocol):
+    """Interface every embedding provider implements.
+
+    Attributes:
+        dimensions: Length of every vector the provider returns.
+    """
+
     dimensions: int
 
     def embed(self, texts: Sequence[str]) -> list[Vector]:
-        """Embed ``texts``, returning one vector per input in the same order."""
+        """Embed ``texts``, returning one vector per input in the same order.
+
+        Args:
+            texts: Texts to embed.
+
+        Returns:
+            One vector of length ``dimensions`` per input text.
+
+        Raises:
+            EmbeddingError: If the request fails or the vectors are the wrong shape.
+        """
         ...
 
 
@@ -45,6 +61,15 @@ class OllamaEmbeddingProvider:
     def __init__(
         self, client: Any, model: str, dimensions: int, batch_size: int, base_url: str
     ) -> None:
+        """Store the client and model settings.
+
+        Args:
+            client: ``ollama.Client`` connected to the server.
+            model: Ollama model name, e.g. ``nomic-embed-text``.
+            dimensions: Output size of the model.
+            batch_size: Texts sent per request.
+            base_url: Server URL, used only in error messages.
+        """
         self._client = client
         self._model = model
         self.dimensions = dimensions
@@ -52,6 +77,19 @@ class OllamaEmbeddingProvider:
         self._base_url = base_url
 
     def embed(self, texts: Sequence[str]) -> list[Vector]:
+        """Embed texts in batches, without truncating over-long inputs.
+
+        Args:
+            texts: Texts to embed.
+
+        Returns:
+            One vector per input text, in the same order.
+
+        Raises:
+            EmbeddingError: If the server is unreachable, times out, returns an
+                error (such as a model that has not been pulled), or returns
+                vectors of the wrong count or size.
+        """
         import httpx
         import ollama
 
@@ -84,12 +122,31 @@ class OpenAIEmbeddingProvider:
     """
 
     def __init__(self, client: Any, model: str, dimensions: int, batch_size: int) -> None:
+        """Store the client and model settings.
+
+        Args:
+            client: ``openai.OpenAI`` or ``openai.AzureOpenAI`` client.
+            model: Model name, or Azure deployment name.
+            dimensions: Vector size requested from the API.
+            batch_size: Texts sent per request.
+        """
         self._client = client
         self._model = model
         self.dimensions = dimensions
         self._batch_size = batch_size
 
     def embed(self, texts: Sequence[str]) -> list[Vector]:
+        """Embed texts in batches, restoring input order from each item's ``index``.
+
+        Args:
+            texts: Texts to embed.
+
+        Returns:
+            One vector per input text, in the same order.
+
+        Raises:
+            EmbeddingError: If the vectors are the wrong count or size.
+        """
         vectors: list[Vector] = []
         for start in range(0, len(texts), self._batch_size):
             batch = list(texts[start : start + self._batch_size])
@@ -106,6 +163,17 @@ class BedrockTitanEmbeddingProvider:
     """Amazon Titan Text Embeddings v2, which embeds one text per request."""
 
     def __init__(self, client: Any, model_id: str, dimensions: int, concurrency: int = 8) -> None:
+        """Store the client and model settings.
+
+        Args:
+            client: boto3 ``bedrock-runtime`` client.
+            model_id: Bedrock model ID.
+            dimensions: Vector size: 256, 512 or 1024.
+            concurrency: Requests run in parallel.
+
+        Raises:
+            EmbeddingError: If ``dimensions`` is not supported by Titan v2.
+        """
         if dimensions not in (256, 512, 1024):
             raise EmbeddingError("Titan Text Embeddings v2 supports 256, 512 or 1024 dimensions")
         self._client = client
@@ -114,11 +182,30 @@ class BedrockTitanEmbeddingProvider:
         self._concurrency = concurrency
 
     def embed(self, texts: Sequence[str]) -> list[Vector]:
+        """Embed texts with one request each, run in parallel.
+
+        Args:
+            texts: Texts to embed.
+
+        Returns:
+            One normalised vector per input text, in the same order.
+
+        Raises:
+            EmbeddingError: If the vectors are the wrong count or size.
+        """
         with ThreadPoolExecutor(max_workers=self._concurrency) as pool:
             vectors = list(pool.map(self._embed_one, texts))
         return _validated(vectors, len(texts), self.dimensions)
 
     def _embed_one(self, text: str) -> Vector:
+        """Embed a single text with one ``invoke_model`` call.
+
+        Args:
+            text: Text to embed.
+
+        Returns:
+            The normalised embedding vector.
+        """
         body = json.dumps({"inputText": text, "dimensions": self.dimensions, "normalize": True})
         response = self._client.invoke_model(
             modelId=self._model_id,
@@ -130,6 +217,19 @@ class BedrockTitanEmbeddingProvider:
 
 
 def build_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
+    """Create the provider and its client for the configured backend.
+
+    Provider SDKs are imported here, so only the selected one needs installing.
+
+    Args:
+        config: Embedding settings; ``provider`` selects the backend.
+
+    Returns:
+        A ready-to-use embedding provider.
+
+    Raises:
+        EmbeddingError: If Bedrock is configured with unsupported dimensions.
+    """
     client: Any
     if config.provider == "ollama":
         import ollama
@@ -169,6 +269,19 @@ def build_embedding_provider(config: EmbeddingConfig) -> EmbeddingProvider:
 
 
 def _validated(vectors: list[Vector], expected: int, dimensions: int) -> list[Vector]:
+    """Check that a provider returned one vector of the right size per input.
+
+    Args:
+        vectors: Vectors returned by the provider.
+        expected: Number of input texts.
+        dimensions: Required vector length.
+
+    Returns:
+        ``vectors``, unchanged.
+
+    Raises:
+        EmbeddingError: If the count or any vector's length is wrong.
+    """
     if len(vectors) != expected:
         raise EmbeddingError(f"Expected {expected} embeddings, got {len(vectors)}")
     for vector in vectors:
