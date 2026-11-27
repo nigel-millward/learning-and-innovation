@@ -20,6 +20,76 @@ schema_management -> extract -> transform -> load -> commit_watermark --> publis
 | `reconcile` | Compares every live page ID with the index and removes vectors for deleted or no-longer-visible pages. A mass-deletion guard stops a permissions fault from emptying the index. |
 | `publish_run_status` | Always runs. Publishes CloudWatch metrics, writes a `pipeline_runs` audit row, sends an SNS warning on degraded success, and fails the DAG run if any stage failed. Task failures send their own SNS alert with the exception. |
 
+## Architecture
+
+The code does not use Bronze/Silver/Gold names, so the layers below are named
+by what they hold. In order, from source to consumption:
+
+1. **Source: Confluence REST API.** Pages are found with a CQL search and fetched by `integrations/confluence.py`.
+2. **Orchestrator: Airflow DAG `confluence_indexing`.** Runs daily at 02:00 and runs each stage in turn.
+3. **Raw layer: S3 `raw/`.** One immutable JSON envelope per page version (`raw/space=/page_id=/version=.json`).
+4. **Run artefacts: S3 `runs/run_id=…/`.** `extract_manifest.json` lists the pages extracted in a run; `documents.jsonl` holds the cleaned, chunked pages.
+5. **Embedding provider.** Ollama, OpenAI, Azure OpenAI or Bedrock Titan; `load` sends it only chunks whose hash has no existing vector.
+6. **Serving layer: PostgreSQL + pgvector, schema `confluence_index`.** The `chunks` table holds text and vectors; `pages`, `pipeline_state`, `failed_pages` and `pipeline_runs` hold registry, watermark, dead letters and audit rows.
+7. **Consumers: the `confluence_index` Airflow asset.** `load` and `reconcile` update it, so downstream DAGs can schedule on it. Retrieval queries against `chunks` happen outside this repository.
+8. **Observability: CloudWatch and SNS.** `publish_run_status` and the task-failure callback publish metrics and alerts.
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "18px"}}}%%
+flowchart TD
+    A["Source<br/>Confluence REST API"]
+    B["Orchestrator<br/>confluence_indexing"]
+    C["S3 raw layer<br/>raw/"]
+    D["S3 run artefact<br/>extract_manifest.json"]
+    E["S3 run artefact<br/>documents.jsonl"]
+    F["Embedding provider<br/>EMBEDDING_*"]
+    G["PostgreSQL + pgvector<br/>confluence_index.chunks"]
+    H["Airflow asset<br/>confluence_index"]
+    I["Consumers<br/>downstream DAGs"]
+    J["Observability<br/>CloudWatch and SNS"]
+
+    A -->|"pages"| B
+    B -->|"land"| C
+    B -->|"manifest"| D
+    C -->|"transform"| E
+    D -->|"transform"| E
+    E -->|"embed"| F
+    F -->|"vectors"| G
+    E -->|"load"| G
+    G -->|"updates"| H
+    H -->|"triggers"| I
+    B -->|"metrics"| J
+```
+
+## Data & Control Flow
+
+**Control.** Airflow triggers the DAG daily (or manually, with the
+`full_refresh` and `allow_mass_delete` params). The tasks run in this order:
+
+```
+schema_management -> extract -> transform -> load -> commit_watermark --> publish_run_status
+                                                  \-> reconcile -------/
+```
+
+Stages do not pass data to each other directly. Each pushes small values
+through XCom (`manifest_uri`, `run_started_at`, `documents_uri`), and the next
+task pulls them. The bulk data goes through S3. Tasks retry twice with
+exponential backoff, and `max_active_runs=1` stops two runs racing on the watermark.
+
+**Data (ETL).**
+
+1. **Extract.** The CQL search asks Confluence for pages modified since the stored `load_date` minus an overlap (everything on a full refresh), plus dead-lettered pages due a retry. Versions already indexed are skipped. Each page is written to `raw/…/version=N.json`, and the run writes `extract_manifest.json`.
+2. **Transform.** Reads the manifest, then each raw page. Cleans the XHTML to Markdown, chunks it with a contextual header, and streams one `PageDocument` per page into `documents.jsonl`. A failing page is dead-lettered and left out.
+3. **Load.** Reads `documents.jsonl` in batches of pages. Chunks whose `sha256` hash and embedding version already exist reuse their vector; the rest go to the embedding provider. Each page's rows in `chunks` are replaced in one transaction.
+4. **Commit watermark.** After a successful load, `load_date` moves forward to the extract start time. A failed run therefore re-reads the same window next time.
+5. **Reconcile.** Compares live Confluence page IDs with the index and removes vectors for deleted or hidden pages, behind a mass-deletion guard.
+6. **Publish run status.** Always runs: sends CloudWatch metrics, writes the `pipeline_runs` audit row, warns through SNS on degraded success, and fails the DAG run if any stage failed.
+
+**Outputs.** The data leaves the pipeline as rows in `confluence_index.chunks`
+(with `pages` as the source registry), and as the `confluence_index` asset
+update that downstream DAGs can schedule on. Failures leave through SNS alerts
+and CloudWatch metrics.
+
 ## Layout
 
 ```
@@ -172,6 +242,56 @@ Confluence page under `payload`:
   }
 }
 ```
+
+## Chunk example
+
+`Chunker.chunk(page, text)` splits a page's cleaned Markdown into `Chunk`
+objects. Each chunk keeps the plain `text` body and the heading path
+(`section`) in force where it starts. `embedding_text` is the body prefixed with
+a contextual header: `Title:`, then `Space:`, `Path:` (ancestor titles) and
+`Section:` lines when known, then a blank line. The header is embedded and
+hashed with the body, so a chunk that never names its page (for example "Run
+`./deploy.sh --env prod`") is still retrievable by the page's subject.
+
+For the second chunk of the "Deployment runbook" page, under the headings
+`## Procedure` > `### Rollback`, the result looks like this (values such as
+`token_count` and `content_hash` are illustrative):
+
+```python
+Chunk(
+    page_id="1001",
+    chunk_index=1,
+    text="### Rollback\n\n1. Run `./deploy.sh --rollback`.\n2. Confirm the previous version is serving traffic.",
+    embedding_text=(
+        "Title: Deployment runbook\n"
+        "Space: Engineering\n"
+        "Path: Engineering Home\n"
+        "Section: Procedure > Rollback\n"
+        "\n"
+        "### Rollback\n\n1. Run `./deploy.sh --rollback`.\n2. Confirm the previous version is serving traffic."
+    ),
+    token_count=52,  # tokens in embedding_text, header included
+    section=("Procedure", "Rollback"),
+    content_hash="9f2c…e41a",  # sha256 of embedding_text, set automatically
+)
+```
+
+The text that is embedded (`embedding_text`) renders as:
+
+```text
+Title: Deployment runbook
+Space: Engineering
+Path: Engineering Home
+Section: Procedure > Rollback
+
+### Rollback
+
+1. Run `./deploy.sh --rollback`.
+2. Confirm the previous version is serving traffic.
+```
+
+`Space:` shows the space name, falling back to the key; `Path:` and `Section:`
+are omitted when the page has no ancestors or the chunk precedes the first heading.
 
 ## Run it locally
 
